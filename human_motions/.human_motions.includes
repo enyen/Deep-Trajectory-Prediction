@@ -1,0 +1,4 @@
+include/
+/opt/ros/indigo/include
+/usr/include
+src

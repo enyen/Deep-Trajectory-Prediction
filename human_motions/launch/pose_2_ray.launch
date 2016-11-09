@@ -1,0 +1,10 @@
+<launch>
+	<node name="pose_2_ray" pkg="human_motions" type="pose_2_ray" output="screen">
+		<param name="occupancy_map_topic" value="/map" />
+		<param name="odom_topic" value="/bill" />
+	</node>
+	<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l $(find human_motions)/data/traj_ros.bag">
+	</node>
+	<node name="rviz" pkg="rviz" type="rviz" output="screen">
+	</node>
+</launch>

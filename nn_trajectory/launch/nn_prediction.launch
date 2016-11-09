@@ -1,0 +1,11 @@
+<launch>
+	<node name="nn_predict" pkg="nn_trajectory" type="nn_predict.py" output="screen">
+		<param name="odom_topic" value="/bill" />
+		<param name="model_file" value="$(find nn_trajectory)/tf_model/model" />
+		<param name="model_meta_file" value="$(find nn_trajectory)/tf_model/model.meta" />
+	</node>
+	<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l $(find human_motions)/data/traj_ros.bag">
+	</node>
+	<node name="rviz" pkg="rviz" type="rviz" output="screen">
+	</node>
+</launch>
