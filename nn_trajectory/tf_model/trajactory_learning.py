@@ -10,12 +10,11 @@ traj_back = 30
 traj_front = 50
 order = 2
 
-h1_len = 300
-h2_len = 500
-h3_len = 700
+h1_len = 200
+h2_len = 300
+h3_len = 400
 # out_len = 2*(order+1)
 out_len = traj_front * 2
-# out_len = traj_front * 3
 
 
 def main(_):
@@ -33,26 +32,28 @@ def main(_):
 
     # layer 1
     W1 = tf.Variable(tf.truncated_normal([traj_back * 3, h1_len], stddev=0.1), name="w1")
-    b1 = tf.Variable(tf.truncated_normal([h1_len], stddev=0.01), name="b1")
+    b1 = tf.Variable(tf.truncated_normal([h1_len], mean=0.01, stddev=0.01), name="b1")
     y1 = tf.matmul(x1, W1) + b1
     x2 = tf.nn.relu(y1)
+    x2_drop = tf.nn.dropout(x2, keep_prob=keep_prob)
 
     # layer 2
     W2 = tf.Variable(tf.truncated_normal([h1_len, h2_len], stddev=0.1), name="w2")
-    b2 = tf.Variable(tf.truncated_normal([h2_len], stddev=0.01), name="b2")
-    y2 = tf.matmul(x2, W2) + b2
+    b2 = tf.Variable(tf.truncated_normal([h2_len], mean=0.01, stddev=0.01), name="b2")
+    y2 = tf.matmul(x2_drop, W2) + b2
     x3 = tf.nn.relu(y2)
+    x3_drop = tf.nn.dropout(x3, keep_prob=keep_prob)
 
     # layer 3
     W3 = tf.Variable(tf.truncated_normal([h2_len, h3_len], stddev=0.1), name="w3")
-    b3 = tf.Variable(tf.truncated_normal([h3_len], stddev=0.01), name="b3")
-    y3 = tf.matmul(x3, W3) + b3
+    b3 = tf.Variable(tf.truncated_normal([h3_len], mean=0.01, stddev=0.01), name="b3")
+    y3 = tf.matmul(x3_drop, W3) + b3
     xl = tf.nn.relu(y3)
     xl_drop = tf.nn.dropout(xl, keep_prob=keep_prob)
 
     # layer output
     Wl = tf.Variable(tf.truncated_normal([h3_len, out_len], stddev=0.1), name="wl")
-    bl = tf.Variable(tf.truncated_normal([out_len], stddev=0.01), name="bl")
+    bl = tf.Variable(tf.truncated_normal([out_len], stddev=0.1), name="bl")
     yl = tf.matmul(xl_drop, Wl) + bl
 
     # loss
@@ -66,11 +67,11 @@ def main(_):
     # variable init
     sess = tf.InteractiveSession()
     saver = tf.train.Saver()
-    # saver.restore(sess, "model")
+    # saver.restore(sess, 'model')
     tf.initialize_all_variables().run()
 
     # Train
-    for i in range(100000):
+    for i in range(200000):
         # performance evaluation
         if i % 1000 == 0:
             train_x, train_y = trajactory.train.next_batch(100)
@@ -81,7 +82,7 @@ def main(_):
 
         # variables storing
         if (i % 50000 == 0) and (i != 0):
-            saver.save(sess, "model")
+            saver.save(sess, 'model')
             print("model saved.")
 
         # training batch
@@ -91,7 +92,7 @@ def main(_):
     tf.add_to_collection("yl", yl)
     tf.add_to_collection("x1", x1)
     tf.add_to_collection("keep_prob", keep_prob)
-    saver.save(sess, "model")
+    saver.save(sess, 'model')
     print("model saved.")
 
 
