@@ -1,4 +1,4 @@
-#include "pose_2_ray.h"
+#include "human_motions/pose_2_ray.h"
 
 #include <tf/transform_broadcaster.h>
 

@@ -1,0 +1,27 @@
+<launch>
+	<arg name="odom_topic" default="/bill" />
+	<arg name="path_size" default="30" />
+	<arg name="predict_time" default="2" />
+	<arg name="decision_boundary" default="0.5" />
+
+	<include file="$(find human_motions)/launch/leastsquare.launch">
+		<arg name="predict_time" value="$(arg predict_time)" />
+		<arg name="backgroud" value="false" />
+	</include>
+	<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
+		<arg name="backgroud" value="false" />
+	</include>
+
+	<node name="predict_merge" pkg="human_motions" type="predict_merge" output="screen">
+		<arg name="predict_time" value="$(arg predict_time)"/>
+		<arg name="decision_boundary" value="$(arg decision_boundary)" />
+	</node>
+
+	<node name="pass_path" pkg="human_motions" type="pass_path" output="screen">
+		<param name="odom_topic" value="$(arg odom_topic)" />
+		<param name="path_size" value="$(arg path_size)" />
+	</node>
+
+	<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l $(find human_motions)/data/traj_ros.bag" />
+	<node name="rviz" pkg="rviz" type="rviz" output="screen" />
+</launch>

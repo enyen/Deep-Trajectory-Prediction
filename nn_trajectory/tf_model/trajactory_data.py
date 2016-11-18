@@ -91,7 +91,7 @@ def read_data_sets(len_back, len_front, test_size=3000):
 #         # data[len_back:] = data[len_back:] - np.mean(data[len_back:], axis=0)
 #         # data[len_back:] = data[len_back:] / np.std(data[len_back:], axis=0)
 #
-#         data[:, 0] = data[:, 0] - data[0, 0]
+#         data[:, 0] -= data[0, 0]
 #         train_data.append(np.reshape(data[:len_back], -1))
 #
 #         X = np.zeros([len_front, order + 1])
@@ -104,10 +104,8 @@ def read_data_sets(len_back, len_front, test_size=3000):
 #         temp = np.linalg.solve(X.transpose().dot(X), X.transpose())
 #         train_label.append(np.reshape(temp.dot(Y), -1))
 #
-#     data_file = 'traj_data'
-#     label_file = 'traj_label'
-#     np.save(data_file, np.asarray(train_data))
-#     np.save(label_file, np.asarray(train_label))
+#     np.save('traj_data', np.asarray(train_data))
+#     np.save('traj_label', np.asarray(train_label))
 
 
 def produce_data(len_back, len_front, order):
@@ -117,22 +115,20 @@ def produce_data(len_back, len_front, order):
         for line in f:
             raw_data.append(line.split())
 
+    raw_data = np.asarray(np.asarray(raw_data, dtype=np.float32))
+    data_stat = np.zeros([2,3])
+    data_stat[0,:] = np.mean(raw_data, axis=0)
+    data_stat[1,:] = np.std(raw_data, axis=0)
+    raw_data -= data_stat[0,:]
+    raw_data /= data_stat[1,:]
+
     train_data = []
     train_label = []
     for idx in range(len_back, (len(raw_data)-len_front)):
-        data = np.asarray(np.asarray(raw_data[(idx - len_back):(idx + len_front)], dtype=np.float32))
-        # # for x
-        # data[:len_back] = data[:len_back] - np.mean(data[:len_back], axis=0)
-        # data[:len_back] = data[:len_back] / np.std(data[:len_back], axis=0)
-        # # for y
-        # data[len_back:] = data[len_back:] - np.mean(data[len_back:], axis=0)
-        # data[len_back:] = data[len_back:] / np.std(data[len_back:], axis=0)
-
+        data = raw_data[(idx - len_back):(idx + len_front)]
         train_data.append(np.reshape(data[:len_back], -1))
-        train_label.append(np.reshape(data[len_back:, 1:], -1))
+        train_label.append(np.reshape(data[len_back:], -1))
 
-    data_file = 'traj_data'
-    label_file = 'traj_label'
-    np.save(data_file, np.asarray(train_data))
-    np.save(label_file, np.asarray(train_label))
-
+    np.save('traj_data', np.asarray(train_data))
+    np.save('traj_label', np.asarray(train_label))
+    np.save('traj_stat', data_stat)
