@@ -7,14 +7,15 @@ import trajactory_data as input_data
 import tensorflow as tf
 
 traj_back = 30
-traj_front = 30
+traj_front = 40
 order = 2
 
-h1_len = 100
-h2_len = 200
-h3_len = 300
-# out_len = 2*(order+1)
-out_len = traj_front * 3
+h1_len = 200
+h2_len = 300
+h3_len = 400
+out_len = 2*(order+1)
+# out_len = traj_front * 2
+# out_len = traj_front * 3
 
 
 def main(_):
@@ -32,21 +33,21 @@ def main(_):
 
     # layer 1
     W1 = tf.Variable(tf.truncated_normal([traj_back * 3, h1_len], stddev=0.1), name="w1")
-    b1 = tf.Variable(tf.truncated_normal([h1_len], mean=0.01, stddev=0.01), name="b1")
+    b1 = tf.Variable(tf.truncated_normal([h1_len], mean=0.05, stddev=0.05), name="b1")
     y1 = tf.matmul(x1, W1) + b1
     x2 = tf.nn.relu(y1)
     # x2_drop = tf.nn.dropout(x2, keep_prob=keep_prob)
 
     # layer 2
     W2 = tf.Variable(tf.truncated_normal([h1_len, h2_len], stddev=0.1), name="w2")
-    b2 = tf.Variable(tf.truncated_normal([h2_len], mean=0.01, stddev=0.01), name="b2")
+    b2 = tf.Variable(tf.truncated_normal([h2_len], mean=0.05, stddev=0.05), name="b2")
     y2 = tf.matmul(x2, W2) + b2
     x3 = tf.nn.relu(y2)
     # x3_drop = tf.nn.dropout(x3, keep_prob=keep_prob)
 
     # layer 3
     W3 = tf.Variable(tf.truncated_normal([h2_len, h3_len], stddev=0.1), name="w3")
-    b3 = tf.Variable(tf.truncated_normal([h3_len], mean=0.01, stddev=0.01), name="b3")
+    b3 = tf.Variable(tf.truncated_normal([h3_len], mean=0.05, stddev=0.05), name="b3")
     y3 = tf.matmul(x3, W3) + b3
     xl = tf.nn.relu(y3)
     xl_drop = tf.nn.dropout(xl, keep_prob=keep_prob)
@@ -59,7 +60,7 @@ def main(_):
     # loss
     y_ = tf.placeholder(tf.float32, [None, out_len])
     l2loss = tf.reduce_mean(tf.nn.l2_loss(yl - y_))
-    train_step = tf.train.RMSPropOptimizer(1e-3).minimize(l2loss)
+    train_step = tf.train.AdagradOptimizer(1e-3).minimize(l2loss)
 
     # eval
     predict_loss = tf.reduce_mean(tf.cast(tf.nn.l2_loss(yl - y_), tf.float32))

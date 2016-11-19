@@ -8,13 +8,12 @@ import rospy
 from nav_msgs.msg import *
 from geometry_msgs.msg import *
 from std_msgs.msg import *
-import tf.transformations
 
 import numpy as np
 import tensorflow as tflow
 
 traj_back = 30
-traj_front = 30
+traj_front = 40
 order = 2
 
 
@@ -60,56 +59,57 @@ class nnPredict:
             batch_xs[i, 1] = msg.poses[i].pose.position.x
             batch_xs[i, 2] = msg.poses[i].pose.position.y
             lasttime = msg.poses[i].header.stamp
-        batch_xs -= self.stat[0]
-        batch_xs /= self.stat[1]
+        # batch_xs -= self.stat[0]
+        # batch_xs /= self.stat[1]
         batch_xs = np.reshape(batch_xs, newshape=[1,traj_back*3])
         result = self.predict.eval(feed_dict={self.input: batch_xs, self.drop: 1.0}, session=self.sess)
 
         ### Output Organisation ###
         new_poses = []
-        result = np.reshape(result, [traj_front, 3])
-        result *= self.stat[1]
-        result += self.stat[0]
-        lasttime = msg.poses[-1].header.stamp
-        X = np.zeros([traj_front, order + 1])
-        Y = np.zeros([traj_front, 2])
-        for j in range(0, traj_front):
-            new_pose = PoseStamped()
-            new_pose.pose.position.x = result[j, 1]
-            new_pose.pose.position.y = result[j, 2]
-            new_pose.pose.position.z = 0
-            new_pose.pose.orientation.w = 1
-            new_pose.header = msg.poses[-1].header
-            new_pose.header.stamp = lasttime + rospy.Duration(result[j, 0])
-            lasttime = new_pose.header.stamp
-            new_poses.append(new_pose)
+        # result = np.reshape(result, [traj_front, 2])
+        # result *= self.stat[1, 1:]
+        # result += self.stat[0, 1:]
+        # lasttime = msg.poses[-1].header.stamp
+        # X = np.zeros([traj_front, order + 1])
+        # Y = np.zeros([traj_front, 2])
+        # for j in range(0, traj_front):
+        #     new_pose = PoseStamped()
+        #     new_pose.pose.position.x = result[j, 0]
+        #     new_pose.pose.position.y = result[j, 1]
+        #     new_pose.pose.position.z = 0
+        #     new_pose.pose.orientation.w = 1
+        #     new_pose.header = msg.poses[-1].header
+        #     # new_pose.header.stamp = lasttime + rospy.Duration(result[j, 0])
+        #     # lasttime = new_pose.header.stamp
+        #     new_poses.append(new_pose)
+        #
+        #     # for k in range(0, order + 1):
+        #     #     X[j, k] = np.power(result[j, 0], k)
+        #     # Y[i, 0] = result[j, 1]
+        #     # Y[i, 1] = result[j, 2]
 
-            for k in range(0, order + 1):
-                X[j, k] = np.power(result[j, 0], k)
-            Y[i, 0] = result[j, 1]
-            Y[i, 1] = result[j, 2]
-
-        param = np.reshape(np.linalg.solve(X.transpose().dot(X), X.transpose().dot(Y)).transpose(), -1)
-        # result = np.reshape(np.reshape(result, [order + 1, 2]).transpose(), -1)
+        # param = np.reshape(np.linalg.solve(X.transpose().dot(X), X.transpose().dot(Y)).transpose(), -1)
+        result = np.reshape(result, -1)
         params = []
         for dt in range(0, 6):
-            params.append(param[dt])
-            # params.append(result[dt])
+             # params.append(param[dt])
+            params.append(result[dt])
         params.append(msg.poses[0].header.stamp.to_sec())
         params.append(msg.poses[-1].header.stamp.to_sec())
         self.pub_path_param.publish(Float64MultiArray(data=params))
 
-        # span = (msg.poses[-1].header.stamp - msg.poses[0].header.stamp).to_sec()
-        # for j in range(0, self.predict_time*10):
-        #     span += 0.1
-        #     new_pose = PoseStamped()
-        #     new_pose.pose.position.x = result[0] + result[1] * span + result[2] * np.power(span, 2)
-        #     new_pose.pose.position.y = result[3] + result[4] * span + result[5] * np.power(span, 2)
-        #     new_pose.pose.position.z = 0
-        #     new_pose.pose.orientation = msg.poses[-1].pose.orientation
-        #     new_pose.header = msg.poses[-1].header
-        #     new_pose.header.stamp = msg.poses[0].header.stamp + rospy.Duration(span)
-        #     new_poses.append(new_pose)
+        span = 0
+        for j in range(0, self.predict_time*10):
+            # span += ((0.01-self.stat[0,0]) / self.stat[1,0])
+            span += 0.1
+            new_pose = PoseStamped()
+            new_pose.pose.position.x = (result[0] + result[1]*span + result[2]*np.power(span, 2)) #*self.stat[1,1] + self.stat[0,1]
+            new_pose.pose.position.y = (result[3] + result[4]*span + result[5]*np.power(span, 2)) #*self.stat[1,2] + self.stat[0,2]
+            new_pose.pose.position.z = 0
+            new_pose.pose.orientation.w = 1
+            new_pose.header = msg.poses[-1].header
+            # new_pose.header.stamp = msg.poses[0].header.stamp + rospy.Duration(span)
+            new_poses.append(new_pose)
 
         self.pub_path_predict.publish(header=msg.header, poses=new_poses)
 

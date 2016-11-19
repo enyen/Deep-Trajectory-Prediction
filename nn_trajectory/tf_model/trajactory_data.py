@@ -73,41 +73,6 @@ def read_data_sets(len_back, len_front, test_size=3000):
     return base.Datasets(train=train, test=test, validation=validate)
 
 
-# def produce_data(len_back, len_front, order):
-#     local_file = 'trajactory2.txt'
-#     with open(local_file, 'rb') as f:
-#         raw_data = []
-#         for line in f:
-#             raw_data.append(line.split())
-#
-#     train_data = []
-#     train_label = []
-#     for idx in range(len_back, (len(raw_data)-len_front)):
-#         data = np.asarray(np.asarray(raw_data[(idx - len_back):(idx + len_front)], dtype=np.float32))
-#         # # for x
-#         # data[:len_back] = data[:len_back] - np.mean(data[:len_back], axis=0)
-#         # data[:len_back] = data[:len_back] / np.std(data[:len_back], axis=0)
-#         # # for y
-#         # data[len_back:] = data[len_back:] - np.mean(data[len_back:], axis=0)
-#         # data[len_back:] = data[len_back:] / np.std(data[len_back:], axis=0)
-#
-#         data[:, 0] -= data[0, 0]
-#         train_data.append(np.reshape(data[:len_back], -1))
-#
-#         X = np.zeros([len_front, order + 1])
-#         Y = np.zeros([len_front, 2])
-#         for i in range(0, len_front):
-#             for j in range(0, order + 1):
-#                 X[i, j] = np.power(data[(len_back + i), 0], j)
-#             Y[i, 0] = data[(len_back + i), 1]
-#             Y[i, 1] = data[(len_back + i), 2]
-#         temp = np.linalg.solve(X.transpose().dot(X), X.transpose())
-#         train_label.append(np.reshape(temp.dot(Y), -1))
-#
-#     np.save('traj_data', np.asarray(train_data))
-#     np.save('traj_label', np.asarray(train_label))
-
-
 def produce_data(len_back, len_front, order):
     local_file = 'trajactory.txt'
     with open(local_file, 'rb') as f:
@@ -116,19 +81,59 @@ def produce_data(len_back, len_front, order):
             raw_data.append(line.split())
 
     raw_data = np.asarray(np.asarray(raw_data, dtype=np.float32))
-    data_stat = np.zeros([2,3])
-    data_stat[0,:] = np.mean(raw_data, axis=0)
-    data_stat[1,:] = np.std(raw_data, axis=0)
-    raw_data -= data_stat[0,:]
-    raw_data /= data_stat[1,:]
+    # data_stat = np.zeros([2,3])
+    # data_stat[0,:] = np.mean(raw_data, axis=0)
+    # data_stat[1,:] = np.std(raw_data, axis=0)
+    # raw_data -= data_stat[0,:]
+    # raw_data /= data_stat[1,:]
 
     train_data = []
     train_label = []
-    for idx in range(len_back, (len(raw_data)-len_front)):
+    for idx in range(len_back, (raw_data.shape[0]-len_front)):
         data = raw_data[(idx - len_back):(idx + len_front)]
+
+        # data[:, 0] -= data[0, 0]
         train_data.append(np.reshape(data[:len_back], -1))
-        train_label.append(np.reshape(data[len_back:], -1))
+
+        X = np.zeros([len_front, order + 1])
+        Y = np.zeros([len_front, 2])
+        accum = 0
+        for i in range(0, len_front):
+            accum += data[(len_back + i), 0]
+            for j in range(0, order + 1):
+                X[i, j] = np.power(accum, j)
+            Y[i, 0] = data[(len_back + i), 1]
+            Y[i, 1] = data[(len_back + i), 2]
+        temp = np.linalg.solve(X.transpose().dot(X), X.transpose())
+        train_label.append(np.reshape(temp.dot(Y).transpose(), -1))
 
     np.save('traj_data', np.asarray(train_data))
     np.save('traj_label', np.asarray(train_label))
-    np.save('traj_stat', data_stat)
+    # np.save('traj_stat', data_stat)
+
+
+# def produce_data(len_back, len_front, order):
+#     local_file = 'trajactory.txt'
+#     with open(local_file, 'rb') as f:
+#         raw_data = []
+#         for line in f:
+#             raw_data.append(line.split())
+#
+#     raw_data = np.asarray(np.asarray(raw_data, dtype=np.float32))
+#     data_stat = np.zeros([2,3])
+#     data_stat[0,:] = np.mean(raw_data, axis=0)
+#     data_stat[1,:] = np.std(raw_data, axis=0)
+#     raw_data -= data_stat[0,:]
+#     raw_data /= data_stat[1,:]
+#
+#     train_data = []
+#     train_label = []
+#     for idx in range(len_back, (raw_data.shape[0]-len_front)):
+#         data = raw_data[(idx - len_back):(idx + len_front)]
+#         train_data.append(np.reshape(data[:len_back], -1))
+#         # train_label.append(np.reshape(data[len_back:], -1))
+#         train_label.append(np.reshape(data[len_back:, 1:], -1))
+#
+#     np.save('traj_data', np.asarray(train_data))
+#     np.save('traj_label', np.asarray(train_label))
+#     np.save('traj_stat', data_stat)
