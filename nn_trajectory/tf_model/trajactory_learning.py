@@ -28,7 +28,7 @@ def main(_):
     trajactory = input_data.read_data_sets(traj_back, traj_front)
 
     # layer input
-    x1 = tf.placeholder(tf.float32, [None, traj_back * 3])
+    x1 = tf.placeholder(tf.float32, [None, traj_back * 3], name='x1')
     keep_prob = tf.placeholder(tf.float32)
 
     # layer 1
@@ -50,7 +50,7 @@ def main(_):
     b3 = tf.Variable(tf.truncated_normal([h3_len], mean=0.05, stddev=0.05), name="b3")
     y3 = tf.matmul(x3, W3) + b3
     xl = tf.nn.relu(y3)
-    xl_drop = tf.nn.dropout(xl, keep_prob=keep_prob)
+    xl_drop = tf.nn.dropout(xl, keep_prob=keep_prob, name='keep_prob')
 
     # layer output
     Wl = tf.Variable(tf.truncated_normal([h3_len, out_len], stddev=0.1), name="wl")
@@ -58,9 +58,10 @@ def main(_):
     yl = tf.matmul(xl_drop, Wl) + bl
 
     # loss
-    y_ = tf.placeholder(tf.float32, [None, out_len])
+    y_ = tf.placeholder(tf.float32, [None, out_len], name='y_')
     l2loss = tf.reduce_mean(tf.nn.l2_loss(yl - y_))
-    train_step = tf.train.AdagradOptimizer(1e-3).minimize(l2loss)
+    learn_rate = tf.placeholder(tf.float32, name='learn_rate')
+    train_step = tf.train.AdagradOptimizer(learning_rate=learn_rate, name='train_step').minimize(l2loss)
 
     # eval
     predict_loss = tf.reduce_mean(tf.cast(tf.nn.l2_loss(yl - y_), tf.float32))
@@ -68,11 +69,11 @@ def main(_):
     # variable init
     sess = tf.InteractiveSession()
     saver = tf.train.Saver()
-    # saver.restore(sess, 'model')
-    tf.initialize_all_variables().run()
+    saver.restore(sess, 'model')
+    # tf.initialize_all_variables().run()
 
     # Train
-    for i in range(100000):
+    for i in range(200000):
         # performance evaluation
         if i % 1000 == 0:
             train_x, train_y = trajactory.train.next_batch(100)
@@ -88,11 +89,14 @@ def main(_):
 
         # training batch
         batch_xs, batch_ys = trajactory.train.next_batch(100)
-        train_step.run(feed_dict={x1: batch_xs, y_: batch_ys, keep_prob: 0.5})
+        train_step.run(feed_dict={x1: batch_xs, y_: batch_ys, keep_prob: 0.5, learn_rate: 1e-3})
 
     tf.add_to_collection("yl", yl)
     tf.add_to_collection("x1", x1)
     tf.add_to_collection("keep_prob", keep_prob)
+    tf.add_to_collection("y_", y_)
+    tf.add_to_collection("train_step", train_step)
+    tf.add_to_collection("learn_rate", learn_rate)
     saver.save(sess, 'model')
     print("model saved.")
 

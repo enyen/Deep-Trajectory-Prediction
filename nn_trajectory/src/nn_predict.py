@@ -11,6 +11,7 @@ from std_msgs.msg import *
 
 import numpy as np
 import tensorflow as tflow
+from collections import deque
 
 traj_back = 30
 traj_front = 40
@@ -40,7 +41,13 @@ class nnPredict:
         self.predict = tflow.get_collection('yl')[0]
         self.input = tflow.get_collection('x1')[0]
         self.drop = tflow.get_collection('keep_prob')[0]
+        self.train_step = tflow.get_collection('train_step')[0]
+        self.y_ = tflow.get_collection('y_')[0]
+        self.learn_rate = tflow.get_collection('learn_rate')[0]
         self.stat = np.load(stat_file)
+
+        self.train_data = deque(maxlen=traj_front)
+        self.train_label = deque(maxlen=traj_front)
 
     def handle_path(self, msg):
         start_idx = 0
@@ -99,7 +106,7 @@ class nnPredict:
         self.pub_path_param.publish(Float64MultiArray(data=params))
 
         span = 0
-        for j in range(0, self.predict_time*10):
+        for j in range(0, int(self.predict_time*10)):
             # span += ((0.01-self.stat[0,0]) / self.stat[1,0])
             span += 0.1
             new_pose = PoseStamped()
@@ -112,6 +119,28 @@ class nnPredict:
             new_poses.append(new_pose)
 
         self.pub_path_predict.publish(header=msg.header, poses=new_poses)
+
+        ### online learning ###
+        self.train_label.append(batch_xs[0, -3:])
+        if len(self.train_label) == traj_front:
+            X = np.zeros([traj_front, order + 1])
+            Y = np.zeros([traj_front, 2])
+            accum = 0
+            for i in range(0, traj_front):
+                accum += self.train_label[i][0]
+                for j in range(0, order + 1):
+                    X[i, j] = np.power(accum, j)
+                Y[i, 0] = self.train_label[i][1]
+                Y[i, 1] = self.train_label[i][2]
+            temp = np.linalg.solve(X.transpose().dot(X), X.transpose())
+            self.train_step.run(feed_dict={self.input: self.train_data[0],
+                                           self.y_: np.reshape(temp.dot(Y).transpose(), [1,6]),
+                                           self.learn_rate: 5*1e-3,
+                                           self.drop: 0.8}, session=self.sess)
+        self.train_data.append(batch_xs)
+
+
+
 
 
 def main():

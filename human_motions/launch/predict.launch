@@ -9,12 +9,13 @@
 		<arg name="backgroud" value="false" />
 	</include>
 	<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
+		<arg name="predict_time" value="$(arg predict_time)" />
 		<arg name="backgroud" value="false" />
 	</include>
 
 	<node name="predict_merge" pkg="human_motions" type="predict_merge" output="screen">
-		<arg name="predict_time" value="$(arg predict_time)"/>
-		<arg name="decision_boundary" value="$(arg decision_boundary)" />
+		<param name="predict_time" value="$(arg predict_time)"/>
+		<param name="decision_boundary" value="$(arg decision_boundary)" />
 	</node>
 
 	<node name="pass_path" pkg="human_motions" type="pass_path" output="screen">
