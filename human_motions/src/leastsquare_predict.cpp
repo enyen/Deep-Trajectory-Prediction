@@ -9,6 +9,8 @@ LeastSquare_Predict::LeastSquare_Predict()
     m_sub_path = m_nh.subscribe(path_topic, 1, &LeastSquare_Predict::handle_path, this);
     m_pub_path = m_nh.advertise<nav_msgs::Path>("/human_traj/path_leastsquare", 1);
     m_pub_param = m_nh.advertise<std_msgs::Float64MultiArray>("/human_traj/leastsquare_param", 1);
+
+    ROS_INFO_STREAM("Least Square Trajectory Prediction started.");
 }
 
 LeastSquare_Predict::~LeastSquare_Predict()

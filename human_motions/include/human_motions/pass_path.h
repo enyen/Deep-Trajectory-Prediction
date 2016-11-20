@@ -6,6 +6,7 @@
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <vector>
+#include <math.h>
 
 class PassPath
 {

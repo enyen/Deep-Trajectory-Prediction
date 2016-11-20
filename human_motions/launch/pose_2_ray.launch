@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <launch>
 	<node name="pose_2_ray" pkg="human_motions" type="pose_2_ray" output="screen">
 		<param name="occupancy_map_topic" value="/map" />

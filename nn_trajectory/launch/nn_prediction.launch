@@ -1,18 +1,21 @@
+<?xml version="1.0"?>
 <launch>
 	<arg name="model_file" default="$(find nn_trajectory)/tf_model/model" />
 	<arg name="model_meta_file" default="$(find nn_trajectory)/tf_model/model.meta" />
 	<arg name="stat_file" default="$(find nn_trajectory)/tf_model/traj_stat.npy" />
-	<arg name="predict_time" default="2.0" />
+	<arg name="predict_time" default="1.5" />
 
 	<arg name="backgroud" default="true" />
 	<arg name="odom_topic" default="/bill" />
 	<arg name="path_size" default="30" />
+	<arg name="online_learning" default="false" />
 
 	<node name="nn" pkg="nn_trajectory" type="nn_predict.py" output="screen">
 		<param name="model_file" value="$(arg model_file)" />
 		<param name="model_meta_file" value="$(arg model_meta_file)" />
 		<param name="stat_file" value="$(arg stat_file)" />
 		<param name="predict_time" value="$(arg predict_time)" />
+		<param name="online_learning" value="$(arg online_learning)"/>
 	</node>
 
 	<group if="$(arg backgroud)">

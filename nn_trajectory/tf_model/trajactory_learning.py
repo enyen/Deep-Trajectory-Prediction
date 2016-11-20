@@ -61,7 +61,9 @@ def main(_):
     y_ = tf.placeholder(tf.float32, [None, out_len], name='y_')
     l2loss = tf.reduce_mean(tf.nn.l2_loss(yl - y_))
     learn_rate = tf.placeholder(tf.float32, name='learn_rate')
-    train_step = tf.train.AdagradOptimizer(learning_rate=learn_rate, name='train_step').minimize(l2loss)
+    train_step = tf.train.AdamOptimizer(learning_rate=learn_rate).minimize(l2loss)
+    momentum = tf.placeholder(tf.float32, name='momentum')
+    train_online = tf.train.MomentumOptimizer(learn_rate, momentum, name='train_online').minimize(l2loss)
 
     # eval
     predict_loss = tf.reduce_mean(tf.cast(tf.nn.l2_loss(yl - y_), tf.float32))
@@ -69,11 +71,11 @@ def main(_):
     # variable init
     sess = tf.InteractiveSession()
     saver = tf.train.Saver()
-    saver.restore(sess, 'model')
-    # tf.initialize_all_variables().run()
+    # saver.restore(sess, 'model')
+    tf.initialize_all_variables().run()
 
     # Train
-    for i in range(200000):
+    for i in range(300000):
         # performance evaluation
         if i % 1000 == 0:
             train_x, train_y = trajactory.train.next_batch(100)
@@ -95,8 +97,9 @@ def main(_):
     tf.add_to_collection("x1", x1)
     tf.add_to_collection("keep_prob", keep_prob)
     tf.add_to_collection("y_", y_)
-    tf.add_to_collection("train_step", train_step)
+    tf.add_to_collection("train_online", train_online)
     tf.add_to_collection("learn_rate", learn_rate)
+    tf.add_to_collection("momentum", momentum)
     saver.save(sess, 'model')
     print("model saved.")
 

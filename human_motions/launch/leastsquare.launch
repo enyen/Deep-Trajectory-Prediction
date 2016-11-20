@@ -1,5 +1,6 @@
+<?xml version="1.0"?>
 <launch>
-	<arg name="predict_time" default="2" />
+	<arg name="predict_time" default="1.5" />
 
 	<arg name="backgroud" default="true" />
 	<arg name="odom_topic" default="/bill" />

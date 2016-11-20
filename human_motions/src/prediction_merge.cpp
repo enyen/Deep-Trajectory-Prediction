@@ -11,6 +11,8 @@ PredictionMerge::PredictionMerge()
     m_sub_nn = m_nh.subscribe("/human_traj/nn_param", 1, &PredictionMerge::handle_path_nn, this);
     m_sub_ls = m_nh.subscribe("/human_traj/leastsquare_param", 1, &PredictionMerge::handle_path_ls, this);
     m_pub_path = m_nh.advertise<nav_msgs::Path>("/human_traj/path_merge", 1);
+
+    ROS_INFO_STREAM("Trajectory Predictions Merging started.");
 }
 
 PredictionMerge::~PredictionMerge()

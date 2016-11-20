@@ -12,6 +12,8 @@ PassPath::PassPath()
     }
     m_sub_odom = m_nh.subscribe(odom_topic, 1, &PassPath::handle_odom, this);
     m_pub_path = m_nh.advertise<nav_msgs::Path>("/human_traj/path_pass", 1);
+
+    ROS_INFO_STREAM("Node collecting and publishing passed-trajectory started.");
 }
 
 PassPath::~PassPath()
@@ -21,6 +23,17 @@ PassPath::~PassPath()
 
 void PassPath::handle_odom(const nav_msgs::OdometryConstPtr &msg)
 {
+    if(m_path_pose.size() != 0)
+    {
+        double dist = pow(m_path_pose[m_path_pose.size()-1].pose.position.x - msg->pose.pose.position.x, 2) +
+                      pow(m_path_pose[m_path_pose.size()-1].pose.position.y - msg->pose.pose.position.y, 2);
+        if(sqrt(dist) > 2.0) // 2.141
+        {
+            ROS_WARN_STREAM("trajectory step too big, recollecting trajectory...");
+            m_path_pose.clear();
+        }
+    }
+
     if(m_path_pose.size() >= m_path_size)
         m_path_pose.erase(m_path_pose.begin());
 
@@ -28,6 +41,7 @@ void PassPath::handle_odom(const nav_msgs::OdometryConstPtr &msg)
     new_pose.header = msg->header;
     new_pose.pose = msg->pose.pose;
     new_pose.pose.position.z = 0;
+    new_pose.pose.orientation.w = 1;
     m_path_pose.push_back(new_pose);
 
     if(m_path_pose.size() == m_path_size)
