@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro"
+       name="youbot" >
+
+  <xacro:include filename="$(find youbot_description)/urdf/common.xacro" />
+  <xacro:include filename="$(find youbot_description)/urdf/youbot_base/base.urdf.xacro" />
+  <xacro:include filename="$(find youbot_description)/urdf/materials.urdf.xacro" />
+
+  <link name="bot">
+  </link>
+  <joint name="$bot_footprint_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <child link="botbase_footprint"/>
+    <parent link="bot"/>
+  </joint>
+
+  <xacro:youbot_base name="botbase"/>
+
+</robot>

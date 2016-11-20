@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="controller_freq" default="15" />
+
+	<param name="youbot_robot_description"
+			command="$(find xacro)/xacro.py '$(find robot_control)/hardware/youbot_base.urdf.xacro'" />
+
+	<node pkg="robot_control" type="fake_driver" name="fake_driver" output="screen">
+		<param name="vel_topic" value="cmd_vel" />
+		<param name="controller_freq" value="$(arg controller_freq)" />
+	</node>
+
+	<node pkg="robot_state_publisher" type="robot_state_publisher" name="youbot_state"  output="screen">
+      <remap from="robot_description" to="youbot_robot_description" />
+      <remap from="joint_states" to="youbot_joint_states" />
+    </node>
+
+</launch>
+
