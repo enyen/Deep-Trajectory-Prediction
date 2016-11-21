@@ -8,7 +8,7 @@
 	<arg name="backgroud" default="true" />
 	<arg name="odom_topic" default="/bill" />
 	<arg name="path_size" default="30" />
-	<arg name="online_learning" default="false" />
+	<arg name="online_learning" default="true" />
 
 	<node name="nn" pkg="nn_trajectory" type="nn_predict.py" output="screen">
 		<param name="model_file" value="$(arg model_file)" />

@@ -1,4 +1,0 @@
-include/human_motions/human_model.h
-src/human_model.cpp
-src/pose_2_ray.h
-src/pose_2_ray.cpp

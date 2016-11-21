@@ -4,7 +4,7 @@
 	<arg name="path_size" default="30" />
 	<arg name="predict_time" default="1.5" />
 	<arg name="decision_boundary" default="0.5" />
-	<arg name="online_learning" default="false" />
+	<arg name="online_learning" default="true" />
 
 	<include file="$(find human_motions)/launch/leastsquare.launch">
 		<arg name="predict_time" value="$(arg predict_time)" />
