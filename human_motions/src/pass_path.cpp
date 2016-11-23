@@ -3,7 +3,7 @@
 PassPath::PassPath()
     : m_nh("~")
 {
-    m_path_size = m_nh.param("path_size", 20);
+    m_path_size = m_nh.param("path_size", 30);
     std::string odom_topic = m_nh.param("odom_topic", std::string(""));
     if(odom_topic.empty())
     {
@@ -35,7 +35,9 @@ void PassPath::handle_odom(const nav_msgs::OdometryConstPtr &msg)
     }
 
     if(m_path_pose.size() >= m_path_size)
+    {
         m_path_pose.erase(m_path_pose.begin());
+    }
 
     geometry_msgs::PoseStamped new_pose;
     new_pose.header = msg->header;
@@ -48,7 +50,7 @@ void PassPath::handle_odom(const nav_msgs::OdometryConstPtr &msg)
     {
         nav_msgs::Path nav_path;
         nav_path.header = msg->header;
-        nav_path.poses = m_path_pose;
+        nav_path.poses = std::vector<geometry_msgs::PoseStamped>(m_path_pose.begin(), m_path_pose.begin()+m_path_size);
         m_pub_path.publish(nav_path);
     }
 }

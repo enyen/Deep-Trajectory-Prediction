@@ -3,8 +3,9 @@
 	<arg name="odom_topic" default="/bill" />
 	<arg name="path_size" default="30" />
 	<arg name="predict_time" default="1.5" />
-	<arg name="decision_boundary" default="0.5" />
+	<arg name="decision_boundary" default="0.8" />
 	<arg name="online_learning" default="true" />
+	<arg name="occupancy_grid" default="/map" />
 
 	<include file="$(find human_motions)/launch/leastsquare.launch">
 		<arg name="predict_time" value="$(arg predict_time)" />
@@ -19,6 +20,7 @@
 	<node name="predict_merge" pkg="human_motions" type="predict_merge" output="screen">
 		<param name="predict_time" value="$(arg predict_time)"/>
 		<param name="decision_boundary" value="$(arg decision_boundary)" />
+		<param name="occupancy_grid" value="$(arg occupancy_grid)" />
 	</node>
 
 	<node name="pass_path" pkg="human_motions" type="pass_path" output="screen">
