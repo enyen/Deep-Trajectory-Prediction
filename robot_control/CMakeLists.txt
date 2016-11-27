@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
 	rospy
 	std_msgs
 	tf
+	costmap_2d
 )
 
 ## System dependencies are found with CMake's conventions
@@ -104,7 +105,7 @@ find_package(Boost REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES robot_control
-  CATKIN_DEPENDS roscpp std_msgs tf
+  CATKIN_DEPENDS roscpp std_msgs tf costmap_2d
 #  DEPENDS system_lib
 )
 
