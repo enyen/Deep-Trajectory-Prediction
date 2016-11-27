@@ -8,12 +8,12 @@
 
   <link name="bot">
   </link>
-  <joint name="$bot_footprint_joint" type="fixed">
+  <joint name="$footprint_joint" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0"/>
-    <child link="botbase_footprint"/>
+    <child link="base_footprint"/>
     <parent link="bot"/>
   </joint>
 
-  <xacro:youbot_base name="botbase"/>
+  <xacro:youbot_base name="base"/>
 
 </robot>

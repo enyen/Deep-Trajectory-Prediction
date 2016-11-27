@@ -15,7 +15,7 @@
 			<param name="odom_topic" value="$(arg odom_topic)" />
 			<param name="path_size" value="$(arg path_size)" />
 		</node>
-		<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l $(find human_motions)/data/traj_ros.bag" />
+		<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l --delay=1 --queue=10 $(find human_motions)/data/traj.bag" />
 		<node name="rviz" pkg="rviz" type="rviz" output="screen" />
 	</group>
 </launch>
