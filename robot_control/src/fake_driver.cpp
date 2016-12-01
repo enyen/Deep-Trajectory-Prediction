@@ -95,11 +95,6 @@ void FakeDriver::step()
         int x6 = x     + b;
         int y6 = y     - d;
 
-//        tf::Transform transform;
-//        transform.setOrigin( tf::Vector3(next_x+b, next_y-d, 0.0) );
-//        transform.setRotation( tf::Quaternion(0, 0, 0, 1) );
-//        m_tf_boardcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "map", "asd"));
-
         if((m_grid.data[y1*m_grid.info.width + x1] != 0) ||
            (m_grid.data[y2*m_grid.info.width + x2] != 0) ||
            (m_grid.data[y3*m_grid.info.width + x3] != 0) ||

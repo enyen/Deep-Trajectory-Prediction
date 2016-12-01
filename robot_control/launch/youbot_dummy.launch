@@ -12,6 +12,10 @@
 		<param name="occupancy_grid" value="$(arg occupancy_grid)" />
 	</node>
 
+	<node pkg="robot_control" type="robot_trainer" name="robot_trainer" output="screen">
+
+	</node>
+
 	<node pkg="robot_state_publisher" type="robot_state_publisher" name="youbot_state"  output="screen">
       <remap from="robot_description" to="youbot_robot_description" />
       <remap from="joint_states" to="youbot_joint_states" />

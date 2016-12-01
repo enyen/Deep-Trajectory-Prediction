@@ -6,10 +6,11 @@ project(robot_control)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
 	roscpp
-	rospy
 	std_msgs
 	tf
-	costmap_2d
+	nav_msgs
+	move_base_msgs
+	actionlib
 )
 
 ## System dependencies are found with CMake's conventions
@@ -105,7 +106,7 @@ find_package(Boost REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES robot_control
-  CATKIN_DEPENDS roscpp std_msgs tf costmap_2d
+  CATKIN_DEPENDS roscpp std_msgs tf nav_msgs move_base_msgs actionlib
 #  DEPENDS system_lib
 )
 
@@ -134,15 +135,18 @@ include_directories( include
 ## Declare a C++ executable
 add_executable(robot_control src/robot_control.cpp)
 add_executable(fake_driver src/fake_driver.cpp)
+add_executable(robot_trainer src/robot_trainer.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(robot_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(fake_driver ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(robot_trainer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(robot_control ${catkin_LIBRARIES})
 target_link_libraries(fake_driver ${catkin_LIBRARIES})
+target_link_libraries(robot_trainer ${catkin_LIBRARIES})
 
 #############
 ## Install ##
