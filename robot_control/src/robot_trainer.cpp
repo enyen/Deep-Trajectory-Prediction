@@ -62,7 +62,7 @@ void RobotTrainer::new_goal()
         x = rand()%m_costmap.info.width;
         y = rand()%m_costmap.info.height;
 //        ROS_INFO_STREAM("target:" << x*m_costmap.info.resolution << ", " << y*m_costmap.info.resolution);
-        if(m_costmap.data[x+y*m_costmap.info.width] < 100)
+        if(m_costmap.data[x+y*m_costmap.info.width] < 50)
             break;
     }
     m_goal_move.target_pose.pose.position.x = x*m_costmap.info.resolution;
@@ -72,29 +72,32 @@ void RobotTrainer::new_goal()
                            boost::bind(&RobotTrainer::handle_move_done, this, _1, _2),
                            boost::bind(&RobotTrainer::handle_move_active, this),
                            movebase_act_client::SimpleFeedbackCallback());
-    m_timer_traj.setPeriod(ros::Duration(30));
+    m_timer_traj.setPeriod(ros::Duration(20));
     m_timer_traj.start();
 }
 
 void RobotTrainer::handle_move_done(const actionlib::SimpleClientGoalState& state,
                                     const move_base_msgs::MoveBaseResultConstPtr& result)
 {
-    ROS_INFO_STREAM("Finished in state " << state.toString());
+    ROS_INFO_STREAM("Finished as " << state.toString());
     m_timer_traj.stop();
     new_goal();
 }
 
 void RobotTrainer::handle_move_active()
 {
-    ROS_INFO_STREAM("New move_base goal went active.");
+    ROS_INFO_STREAM("New goal went active. (" <<
+                    m_goal_move.target_pose.pose.position.x << ", " <<
+                    m_goal_move.target_pose.pose.position.y << ")");
 }
 
 void RobotTrainer::handle_timer_traj(const ros::TimerEvent &event)
 {
-    if(m_client_move.getState().toString() == "ACTIVE")
+    m_timer_traj.stop();
+    if((m_client_move.getState().toString() == "ACTIVE") || (m_client_move.getState().toString() == "LOSS"))
     {
         m_client_move.cancelAllGoals();
-        ROS_INFO_STREAM("trajactory takes too long time, restarting.");
+        ROS_INFO_STREAM("goal expired, restarting.");
         new_goal();
     }
 }

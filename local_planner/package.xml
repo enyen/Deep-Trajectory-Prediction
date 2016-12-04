@@ -21,6 +21,6 @@
   <run_depend>costmap_2d</run_depend>
 
   <export>
-    <nav_core plugin="${prefix}/plugin.xml" />
+    <nav_core plugin="${prefix}/lp_plugin.xml" />
   </export>
 </package>

@@ -1,0 +1,6 @@
+<library path="lib/liblocal_planner">
+  <class type="LocalPlanner" base_class_type="nav_core::BaseLocalPlanner">
+  <description>
+  </description>
+  </class>
+</library>
