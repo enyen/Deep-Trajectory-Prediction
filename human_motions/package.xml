@@ -45,11 +45,15 @@
   <build_depend>rospy</build_depend>
   <build_depend>map_ray_caster</build_depend>
   <build_depend>tf</build_depend>
+  <build_depend>tf2_ros</build_depend>
+  <build_depend>message_generation</build_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>map_ray_caster</run_depend>
   <run_depend>tf</run_depend>
+  <run_depend>tf2_ros</run_depend>
   <run_depend>rospy</run_depend>
+  <run_depend>message_runtime</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
