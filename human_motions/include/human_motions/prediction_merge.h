@@ -38,6 +38,9 @@ private:
     ros::Publisher m_pub_map_ls;
     ros::Publisher m_pub_map_nn;
     ros::Subscriber m_sub_path;
+    ros::Publisher m_pub_performance;
+    ros::Publisher m_pub_map_performance;
+
     using path2param = human_motions::path2params;
     ros::ServiceClient m_srv_cli_param_ls;
     ros::ServiceClient m_srv_cli_param_nn;
@@ -59,9 +62,11 @@ private:
     MatrixXc m_mapData_ls;
     MatrixXc m_mapData_nn;
     nav_msgs::Path m_path_pass;
+    nav_msgs::OccupancyGrid m_map_performance;
 
     bool m_new_nn;
     bool m_new_ls;
+    bool m_map_received;
     int m_predict_step;
     float m_boundary;
     const float PREDICT_ITERATION_TIME;

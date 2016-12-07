@@ -5,6 +5,7 @@ PredictionMerge::PredictionMerge()
     , m_new_ls(false)
     , m_new_nn(false)
     , PREDICT_ITERATION_TIME(0.1)
+    , m_map_received(false)
 {
     m_predict_step = m_nh.param("predict_time", 2.0) / PREDICT_ITERATION_TIME;
     m_boundary = m_nh.param("decision_boundary", 0.8);
@@ -33,6 +34,9 @@ PredictionMerge::PredictionMerge()
     if(!m_srv_cli_param_nn.waitForExistence(ros::Duration(10)))
         ROS_ERROR_STREAM("No nn service server");
 
+    m_pub_performance = m_nh.advertise<std_msgs::Float64MultiArray>("human_traj/performances", 1);
+    m_pub_map_performance = m_nh.advertise<nav_msgs::OccupancyGrid>("human_traj/map_performances", 1);
+
     ROS_INFO_STREAM("Trajectory Predictions Merging started.");
 }
 
@@ -43,10 +47,14 @@ PredictionMerge::~PredictionMerge()
 
 void PredictionMerge::handle_map(const nav_msgs::OccupancyGridPtr& msg)
 {
+    if(m_map_received)
+        return;
+
     m_mapInfo = msg->info;
     m_mapData_merged = MatrixXc::Zero(m_mapInfo.width, m_mapInfo.height);
     m_mapData_ls = MatrixXc::Zero(m_mapInfo.width, m_mapInfo.height);
     m_mapData_nn = MatrixXc::Zero(m_mapInfo.width, m_mapInfo.height);
+    m_map_performance = *msg;
 
     tf::TransformListener listener;
     listener.waitForTransform("/map", "/mocap", msg->header.stamp, ros::Duration(5));
@@ -54,14 +62,18 @@ void PredictionMerge::handle_map(const nav_msgs::OccupancyGridPtr& msg)
     m_mapTransform.setOrigin(tf::Vector3(m_mapTransform.getOrigin().x()/m_mapInfo.resolution,
                                          m_mapTransform.getOrigin().y()/m_mapInfo.resolution,
                                          0));
+    m_map_received = true;
     ROS_INFO_STREAM("Map received.");
 }
 
 void PredictionMerge::handle_path_passed(const nav_msgs::PathConstPtr &msg)
 {
+    if(!m_map_received)
+        return;
+
     m_path_pass = *msg;
 
-    double ls_score=0, nn_score=0;
+    double ls_score=0, nn_score=0, merged_score=0;
     for(int i=0; i<msg->poses.size(); i++)
     {
         int x = msg->poses[i].pose.position.x / m_mapInfo.resolution + m_mapTransform.getOrigin().x();
@@ -69,7 +81,18 @@ void PredictionMerge::handle_path_passed(const nav_msgs::PathConstPtr &msg)
 
         ls_score += m_mapData_ls(x,y);
         nn_score += m_mapData_nn(x,y);
+        merged_score += m_mapData_merged(x,y);
     }
+
+    std_msgs::Float64MultiArray performances;
+    performances.data = {ls_score, nn_score, merged_score};
+    m_pub_performance.publish(performances);
+
+    int x = msg->poses.back().pose.position.x / m_mapInfo.resolution + m_mapTransform.getOrigin().x();
+    int y = msg->poses.back().pose.position.y / m_mapInfo.resolution + m_mapTransform.getOrigin().y();
+    nn_score = std::min(nn_score/20, 100.0);
+    m_map_performance.data[x+y*m_mapInfo.width] = (m_map_performance.data[x+y*m_mapInfo.width]<nn_score)?nn_score:m_map_performance.data[x+y*m_mapInfo.width];
+    m_pub_map_performance.publish(m_map_performance);
 
     bool front = (m_boundary < 0.5);
     m_boundary = m_boundary*0.99 + ls_score/(ls_score+nn_score+1e-3)*0.01;
@@ -98,9 +121,12 @@ void PredictionMerge::merge()
     m_new_ls = false;
     m_new_nn = false;
 
+    if(!m_map_received)
+        return;
+
     std::vector<geometry_msgs::PoseStamped> path_predict;
-//    predict_once(path_predict);
-    predict_recursive(path_predict);
+    predict_once(path_predict);
+//    predict_recursive(path_predict);
 
     m_mapData_merged = (m_mapData_merged.cast<double>() / 1.1).cast<signed char>();
     m_mapData_ls = (m_mapData_ls.cast<double>() / 1.1).cast<signed char>();
@@ -170,9 +196,29 @@ void PredictionMerge::predict_recursive(std::vector<geometry_msgs::PoseStamped> 
     float span = m_param_ls[7] - m_param_ls[6];
     float span2 = 0;
     int confidence = 100;
+    int smallstep = 5;
     for(int i=0; i<m_predict_step; i++)
     {
-        double weighting = std::min(std::max(m_boundary-(i*1.f/m_predict_step) + 0.5, 0.0), 1.0);
+        if((i%smallstep==0) && (i!=0))
+        {
+            srv.request.path = mypath;
+            if(m_srv_cli_param_ls.call(srv))
+            {
+                m_param_ls = srv.response.params.data;
+                span = m_param_ls[7] - m_param_ls[6];
+            }
+            else
+                ROS_ERROR_STREAM("bad ls service call");
+            if(m_srv_cli_param_nn.call(srv))
+            {
+                m_param_nn = srv.response.params.data;
+                span2 = 0;
+            }
+            else
+                ROS_ERROR_STREAM("bad nn service call");
+        }
+
+        double weighting = std::min(std::max(m_boundary-((i%smallstep)*1.f/smallstep) + 0.5, 0.0), 1.0);
 
         span += PREDICT_ITERATION_TIME;
         span2 += PREDICT_ITERATION_TIME;
@@ -205,24 +251,6 @@ void PredictionMerge::predict_recursive(std::vector<geometry_msgs::PoseStamped> 
 
         mypath.poses.push_back(new_pose);
         mypath.poses.erase(mypath.poses.begin());
-        if((i%2==0) && (i!=0))
-        {
-            srv.request.path = mypath;
-            if(m_srv_cli_param_ls.call(srv))
-            {
-                m_param_ls = srv.response.params.data;
-                span = m_param_ls[7] - m_param_ls[6];
-            }
-            else
-                ROS_ERROR_STREAM("bad ls service call");
-            if(m_srv_cli_param_nn.call(srv))
-            {
-                m_param_nn = srv.response.params.data;
-                span2 = 0;
-            }
-            else
-                ROS_ERROR_STREAM("bad nn service call");
-        }
     }
 }
 
