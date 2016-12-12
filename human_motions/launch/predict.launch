@@ -3,8 +3,8 @@
 	<arg name="odom_topic" default="/bill" />
 	<arg name="path_size" default="30" />
 	<arg name="predict_time" default="1.5" />
-	<arg name="decision_boundary" default="0.5" />
-	<arg name="small_step" default="2" />
+	<arg name="decision_boundary" default="0.8" />
+	<arg name="small_step" default="15" />
 	<arg name="online_learning" default="true" />
 	<arg name="occupancy_grid" default="/map" />
 
@@ -36,5 +36,6 @@
 	<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l --delay=5 --queue=10 $(find human_motions)/data/traj.bag" />
 	<node name="rviz" pkg="rviz" type="rviz" output="screen" />
 
-	<node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" arg="/predict_merge/human_traj/performances/data[0] /predict_merge/human_traj/performances/data[1] /predict_merge/human_traj/performances/data[2]" />
+	<node name="rqt_plot" pkg="rqt_plot" type="rqt_plot">
+	</node>
 </launch>

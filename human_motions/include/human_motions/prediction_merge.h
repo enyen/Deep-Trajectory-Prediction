@@ -68,7 +68,11 @@ private:
     bool m_new_ls;
     bool m_map_received;
     int m_predict_step;
+    int m_smallstep;
     float m_boundary;
+    bool m_performstable;
+    std::vector<double> m_performances;
+    int m_publishCounter;
     const float PREDICT_ITERATION_TIME;
 };
 

@@ -7,6 +7,7 @@ PredictionMerge::PredictionMerge()
     , PREDICT_ITERATION_TIME(0.1)
     , m_map_received(false)
     , m_publishCounter(10)
+    , m_performstable(false)
 {
     m_predict_step = m_nh.param("predict_time", 2.0) / PREDICT_ITERATION_TIME;
     m_boundary = m_nh.param("decision_boundary", 0.8);
@@ -38,7 +39,7 @@ PredictionMerge::PredictionMerge()
 
     m_pub_performance = m_nh.advertise<std_msgs::Float64MultiArray>("human_traj/performances", 1);
     m_pub_map_performance = m_nh.advertise<nav_msgs::OccupancyGrid>("human_traj/map_performances", 1);
-    m_performances = {800,800,800};
+    m_performances = {0,0,0,0};
 
     ROS_INFO_STREAM("Trajectory Predictions Merging started.");
 }
@@ -91,10 +92,21 @@ void PredictionMerge::handle_path_passed(const nav_msgs::PathConstPtr &msg)
     {
         m_publishCounter = 10;
         std_msgs::Float64MultiArray performances;
-        if(m_performances[0]==0)
-            m_performances = {ls_score, nn_score, merged_score};
+        if(!m_performstable)
+        {
+            m_performances = {ls_score, nn_score, merged_score, m_boundary};
+            if((m_performances[0]==0) || (m_performances[1]==0) || (m_performances[2]==0))
+                m_performstable = false;
+            else m_performstable = true;
+        }
         else
-            m_performances = {0.99*m_performances[0]+0.01*ls_score, 0.99*m_performances[1]+0.01*nn_score, 0.99*m_performances[2]+0.01*merged_score};
+        {
+            float smoother = 0.98;
+            m_performances = {smoother*m_performances[0]+(1-smoother)*ls_score,
+                              smoother*m_performances[1]+(1-smoother)*nn_score,
+                              smoother*m_performances[2]+(1-smoother)*merged_score,
+                              m_boundary};
+        }
         performances.data = m_performances;
         m_pub_performance.publish(performances);
     }
@@ -105,10 +117,13 @@ void PredictionMerge::handle_path_passed(const nav_msgs::PathConstPtr &msg)
     m_map_performance.data[x+y*m_mapInfo.width] = (m_map_performance.data[x+y*m_mapInfo.width]<nn_score)?nn_score:m_map_performance.data[x+y*m_mapInfo.width];
     m_pub_map_performance.publish(m_map_performance);
 
-    bool front = (m_boundary < 0.5);
-    m_boundary = m_boundary*0.995 + ls_score/(ls_score+nn_score+1e-4)*0.005;
-    if(!(front^(m_boundary>=0.5)))
-        ROS_INFO_STREAM(((m_boundary<0.5) ? "NeuralNet" : "LeastSquare") << " dominating.");
+    if(m_performstable)
+    {
+        bool front = (m_boundary < 0.5);
+        m_boundary = m_boundary*0.98 + m_performances[0]/(m_performances[0]+m_performances[1]+1e-4)*0.02;
+        if(!(front^(m_boundary>=0.5)))
+            ROS_INFO_STREAM(((m_boundary<0.5) ? "NeuralNet" : "LeastSquare") << " dominating.");
+    }
 }
 
 void PredictionMerge::handle_param_ls(const std_msgs::Float64MultiArrayConstPtr& msg)
@@ -229,7 +244,8 @@ void PredictionMerge::predict_recursive(std::vector<geometry_msgs::PoseStamped> 
         }
 
 //        double weighting = std::min(std::max(m_boundary-((i%m_smallstep)*1.f/m_smallstep) + 0.5, 0.0), 1.0);
-        double weighting = std::min(std::max(m_boundary-((i%m_smallstep)*1.f/m_smallstep) + 0.4, 0.0), 1.0);
+//        double weighting = std::min(std::max(m_boundary-((i%m_smallstep)*1.f/m_smallstep) + 0.4, 0.0), 1.0);
+        double weighting = m_boundary;
 
         span += PREDICT_ITERATION_TIME;
         span2 += PREDICT_ITERATION_TIME;
