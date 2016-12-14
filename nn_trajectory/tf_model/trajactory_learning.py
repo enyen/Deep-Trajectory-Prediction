@@ -7,14 +7,14 @@ import trajactory_data as input_data
 import tensorflow as tf
 
 traj_back = 30
-traj_front = 40
+traj_front = 30
 order = 2
 
-h1_len = 200
-h2_len = 300
-h3_len = 400
-out_len = 2*(order+1)
-# out_len = traj_front * 2
+h1_len = 100
+h2_len = 200
+h3_len = 300
+# out_len = 2*(order+1)
+out_len = traj_front * 2
 # out_len = traj_front * 3
 
 
@@ -35,21 +35,24 @@ def main(_):
     W1 = tf.Variable(tf.truncated_normal([traj_back * 3, h1_len], stddev=0.1), name="w1")
     b1 = tf.Variable(tf.truncated_normal([h1_len], mean=0.05, stddev=0.05), name="b1")
     y1 = tf.matmul(x1, W1) + b1
-    x2 = tf.nn.relu(y1)
+    # x2 = tf.nn.relu(y1)
+    x2 = tf.tanh(y1)
     # x2_drop = tf.nn.dropout(x2, keep_prob=keep_prob)
 
     # layer 2
     W2 = tf.Variable(tf.truncated_normal([h1_len, h2_len], stddev=0.1), name="w2")
     b2 = tf.Variable(tf.truncated_normal([h2_len], mean=0.05, stddev=0.05), name="b2")
     y2 = tf.matmul(x2, W2) + b2
-    x3 = tf.nn.relu(y2)
+    # x3 = tf.nn.relu(y2)
+    x3 = tf.tanh(y2)
     # x3_drop = tf.nn.dropout(x3, keep_prob=keep_prob)
 
     # layer 3
     W3 = tf.Variable(tf.truncated_normal([h2_len, h3_len], stddev=0.1), name="w3")
     b3 = tf.Variable(tf.truncated_normal([h3_len], mean=0.05, stddev=0.05), name="b3")
     y3 = tf.matmul(x3, W3) + b3
-    xl = tf.nn.relu(y3)
+    # xl = tf.nn.relu(y3)
+    xl = tf.tanh(y3)
     xl_drop = tf.nn.dropout(xl, keep_prob=keep_prob, name='keep_prob')
 
     # layer output
@@ -71,11 +74,18 @@ def main(_):
     # variable init
     sess = tf.InteractiveSession()
     saver = tf.train.Saver()
-    # saver.restore(sess, 'model')
+    # saver.restore(sess, 'saved3/model')
     tf.initialize_all_variables().run()
+    tf.add_to_collection("yl", yl)
+    tf.add_to_collection("x1", x1)
+    tf.add_to_collection("keep_prob", keep_prob)
+    tf.add_to_collection("y_", y_)
+    tf.add_to_collection("train_online", train_online)
+    tf.add_to_collection("learn_rate", learn_rate)
+    tf.add_to_collection("momentum", momentum)
 
     # Train
-    for i in range(300000):
+    for i in range(500000):
         # performance evaluation
         if i % 1000 == 0:
             train_x, train_y = trajactory.train.next_batch(100)
@@ -86,21 +96,14 @@ def main(_):
 
         # variables storing
         if (i % 50000 == 0) and (i != 0):
-            saver.save(sess, 'model')
+            saver.save(sess, 'saved3/model')
             print("model saved.")
 
         # training batch
         batch_xs, batch_ys = trajactory.train.next_batch(100)
-        train_step.run(feed_dict={x1: batch_xs, y_: batch_ys, keep_prob: 0.5, learn_rate: 1e-3})
+        train_step.run(feed_dict={x1: batch_xs, y_: batch_ys, keep_prob: 0.5, learn_rate: 8e-4})
 
-    tf.add_to_collection("yl", yl)
-    tf.add_to_collection("x1", x1)
-    tf.add_to_collection("keep_prob", keep_prob)
-    tf.add_to_collection("y_", y_)
-    tf.add_to_collection("train_online", train_online)
-    tf.add_to_collection("learn_rate", learn_rate)
-    tf.add_to_collection("momentum", momentum)
-    saver.save(sess, 'model')
+    saver.save(sess, 'saved3/model')
     print("model saved.")
 
 

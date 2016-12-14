@@ -16,7 +16,7 @@ import math
 from collections import deque
 
 traj_back = 30
-traj_front = 40
+traj_front = 30
 order = 2
 
 
@@ -24,11 +24,6 @@ class nnPredict:
     path_pass = []
 
     def __init__(self):
-        self.sub_path_pass = rospy.Subscriber('/human_traj/path_pass', Path, self.handle_path)
-        self.pub_path_param = rospy.Publisher('/human_traj/nn_param', Float64MultiArray, queue_size=1)
-        self.pub_path_predict = rospy.Publisher('/human_traj/path_nn', Path, queue_size=1)
-        self.server = rospy.Service('~pose2params_nn', path2params, self.handle_path2params)
-
         model_file = rospy.get_param('~model_file', '')
         model_meta_file = rospy.get_param('~model_meta_file', '')
         stat_file = rospy.get_param('~stat_file', '')
@@ -59,6 +54,11 @@ class nnPredict:
             rospy.loginfo("NeuralNet Online Learning Enabled.")
         else:
             rospy.loginfo("NeuralNet Online Learning Disabled.")
+
+        self.sub_path_pass = rospy.Subscriber('/human_traj/path_pass', Path, self.handle_path)
+        self.pub_path_param = rospy.Publisher('/human_traj/nn_param', Float64MultiArray, queue_size=1)
+        self.pub_path_predict = rospy.Publisher('/human_traj/path_nn', Path, queue_size=1)
+        self.server = rospy.Service('~pose2params_nn', path2params, self.handle_path2params)
 
     def handle_path(self, msg):
         batch_xs, params = self.predict_once(msg)
@@ -124,19 +124,30 @@ class nnPredict:
         params.append(msg.poses[0].header.stamp.to_sec())
         params.append(msg.poses[-1].header.stamp.to_sec())
 
-        span = 0
+        # span = (lasttime-msg.poses[0].header.stamp).to_sec() - 0.1
+        # span = 0
+        # for j in range(0, self.predict_step):
+        #     # span += ((0.01-self.stat[0,0]) / self.stat[1,0])
+        #     span += 0.1
+        #     new_pose = PoseStamped()
+        #     new_pose.pose.position.x = (
+        #     result[0] + result[1] * span + result[2] * np.power(span, 2))  # *self.stat[1,1] + self.stat[0,1]
+        #     new_pose.pose.position.y = (
+        #     result[3] + result[4] * span + result[5] * np.power(span, 2))  # *self.stat[1,2] + self.stat[0,2]
+        #     new_pose.pose.position.z = 0
+        #     new_pose.pose.orientation.w = 1
+        #     new_pose.header = msg.poses[-1].header
+        #     # new_pose.header.stamp = msg.poses[0].header.stamp + rospy.Duration(span)
+        #     new_poses.append(new_pose)
         for j in range(0, self.predict_step):
-            # span += ((0.01-self.stat[0,0]) / self.stat[1,0])
-            span += 0.1
+            if (len(result)/2) < j:
+                break
             new_pose = PoseStamped()
-            new_pose.pose.position.x = (
-            result[0] + result[1] * span + result[2] * np.power(span, 2))  # *self.stat[1,1] + self.stat[0,1]
-            new_pose.pose.position.y = (
-            result[3] + result[4] * span + result[5] * np.power(span, 2))  # *self.stat[1,2] + self.stat[0,2]
+            new_pose.pose.position.x = msg.poses[-1].pose.position.x + result[j*2]
+            new_pose.pose.position.y = msg.poses[-1].pose.position.y + result[j*2+1]
             new_pose.pose.position.z = 0
             new_pose.pose.orientation.w = 1
             new_pose.header = msg.poses[-1].header
-            # new_pose.header.stamp = msg.poses[0].header.stamp + rospy.Duration(span)
             new_poses.append(new_pose)
 
         if pub:
@@ -197,15 +208,32 @@ class nnPredict:
 
         self.train_label.append(batch_xs[0, -3:])
         if len(self.train_label) == traj_front:
-            X = np.zeros([traj_front, order + 1])
-            Y = np.zeros([traj_front, 2])
+            # X = np.zeros([traj_front, order + 1])
+            # Y = np.zeros([traj_front, 2])
+            # accum = 0
+            # for i in range(0, traj_front):
+            #     accum += self.train_label[i][0]
+            #     for j in range(0, order + 1):
+            #         X[i, j] = np.power(accum, j)
+            #     Y[i, 0] = self.train_label[i][1]
+            #     Y[i, 1] = self.train_label[i][2]
+            X = np.zeros([traj_back+traj_front, order + 1])
+            Y = np.zeros([traj_back+traj_front, 2])
             accum = 0
-            for i in range(0, traj_front):
-                accum += self.train_label[i][0]
-                for j in range(0, order + 1):
-                    X[i, j] = np.power(accum, j)
-                Y[i, 0] = self.train_label[i][1]
-                Y[i, 1] = self.train_label[i][2]
+            for i in range(0, traj_back+traj_front):
+                if i < traj_back:
+                    accum += self.train_data[0][0, i*3]
+                    for j in range(0, order + 1):
+                        X[i, j] = np.power(accum, j)
+                    Y[i, 0] = self.train_data[0][0, i*3+1]
+                    Y[i, 1] = self.train_data[0][0, i*3+2]
+                else:
+                    accum += self.train_label[i-traj_back][0]
+                    for j in range(0, order + 1):
+                        X[i, j] = np.power(accum, j)
+                    Y[i, 0] = self.train_label[i-traj_back][1]
+                    Y[i, 1] = self.train_label[i-traj_back][2]
+
             temp = np.linalg.solve(X.transpose().dot(X), X.transpose())
             self.train_step.run(feed_dict={self.input: self.train_data[0],
                                            self.y_: np.reshape(temp.dot(Y).transpose(), [1, 6]),

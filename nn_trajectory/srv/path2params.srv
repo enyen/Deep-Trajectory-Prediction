@@ -1,0 +1,3 @@
+nav_msgs/Path path
+---
+std_msgs/Float64MultiArray  params

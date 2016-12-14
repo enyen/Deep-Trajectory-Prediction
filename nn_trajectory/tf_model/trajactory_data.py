@@ -50,7 +50,7 @@ class DataSet(object):
         return self._data[start:end], self._label[start:end]
 
 
-def read_data_sets(len_back, len_front, test_size=3000):
+def read_data_sets(len_back, len_front, test_size=1000):
     data_file = 'traj_data.npy'
     label_file = 'traj_label.npy'
     data = np.load(data_file)
@@ -105,7 +105,29 @@ def produce_data(len_back, len_front, order):
             Y[i, 0] = data[(len_back + i), 1]
             Y[i, 1] = data[(len_back + i), 2]
         temp = np.linalg.solve(X.transpose().dot(X), X.transpose())
-        train_label.append(np.reshape(temp.dot(Y).transpose(), -1))
+        params = np.reshape(temp.dot(Y).transpose(), -1)
+        # train_label.append(params)
+
+        # X = np.zeros([len_back+len_front, order + 1])
+        # Y = np.zeros([len_back+len_front, 2])
+        # accum = 0
+        # for i in range(0, len_back+len_front):
+        #     accum += data[i, 0]
+        #     for j in range(0, order + 1):
+        #         X[i, j] = np.power(accum, j)
+        #     Y[i, 0] = data[i, 1]
+        #     Y[i, 1] = data[i, 2]
+        # temp = np.linalg.solve(X.transpose().dot(X), X.transpose())
+        # params = np.reshape(temp.dot(Y).transpose(), -1)
+        # train_label.append(params)
+
+        accum = 0
+        delta = np.zeros(2*len_front)
+        for i in range(0, len_front):
+            accum += 0.1
+            delta[i * 2] = params[0] + accum * params[1] + accum**2 * params[2] - data[(len_back-1), 1]
+            delta[i*2+1] = params[3] + accum * params[4] + accum**2 * params[5] - data[(len_back-1), 2]
+        train_label.append(np.reshape(delta, -1))
 
     np.save('traj_data', np.asarray(train_data))
     np.save('traj_label', np.asarray(train_label))
