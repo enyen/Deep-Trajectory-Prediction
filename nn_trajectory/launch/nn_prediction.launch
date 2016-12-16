@@ -4,18 +4,23 @@
 	<arg name="model_meta_file" default="$(find nn_trajectory)/tf_model/model.meta" />
 	<arg name="stat_file" default="$(find nn_trajectory)/tf_model/traj_stat.npy" />
 	<arg name="predict_time" default="1.5" />
+	<arg name="predict_type" />
 
 	<arg name="backgroud" default="true" />
 	<arg name="odom_topic" default="/bill" />
 	<arg name="path_size" default="30" />
 	<arg name="online_learning" default="true" />
 
-	<node name="nn" pkg="nn_trajectory" type="nn_predict.py" output="screen">
+	<node name="nn$(arg predict_type)" pkg="nn_trajectory" type="nn_predict.py" output="screen">
 		<param name="model_file" value="$(arg model_file)" />
 		<param name="model_meta_file" value="$(arg model_meta_file)" />
 		<param name="stat_file" value="$(arg stat_file)" />
 		<param name="predict_time" value="$(arg predict_time)" />
+		<param name="predict_type" value="$(arg predict_type)" />
 		<param name="online_learning" value="$(arg online_learning)"/>
+		<remap from="/human_traj/nn_score" to="/human_traj/nn_score$(arg predict_type)"/>
+		<remap from="/human_traj/nn_score_map" to="/human_traj/nn_score$(arg predict_type)_map"/>
+		<remap from="/human_traj/path_nn" to="/human_traj/path_nn$(arg predict_type)_map"/>
 	</node>
 
 	<group if="$(arg backgroud)">

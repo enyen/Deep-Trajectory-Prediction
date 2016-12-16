@@ -9,6 +9,7 @@ from nav_msgs.msg import *
 from geometry_msgs.msg import *
 from std_msgs.msg import *
 from human_motions.srv import *
+from tf import *
 
 import numpy as np
 import tensorflow as tflow
@@ -32,6 +33,10 @@ class nnPredict:
             sys.exit()
 
         self.predict_step = int(math.ceil(rospy.get_param('~predict_time', 2) * 10))
+        self.predict_type = int(rospy.get_param('~predict_type', 0))
+        if self.predict_type < 1 and self.predict_type > 4:
+            rospy.logerr('undefine prediction type. Abort.')
+            sys.exit()
 
         self.sess = tflow.InteractiveSession()
         saver = tflow.train.import_meta_graph(model_meta_file)
@@ -59,9 +64,54 @@ class nnPredict:
         self.pub_path_param = rospy.Publisher('/human_traj/nn_param', Float64MultiArray, queue_size=1)
         self.pub_path_predict = rospy.Publisher('/human_traj/path_nn', Path, queue_size=1)
         self.server = rospy.Service('~pose2params_nn', path2params, self.handle_path2params)
+        occu_grid = rospy.get_param('~occupancy_grid', '/map')
+        self.sub_map = rospy.Subscriber(occu_grid, OccupancyGrid, self.handle_map)
+        self.pub_score = rospy.Publisher('/human_traj/nn_score', Float64MultiArray, queue_size=1)
+        self.pub_score_map = rospy.Publisher('/human_traj/nn_score_map', OccupancyGrid, queue_size=1)
+
+        self.map_info = None
+        self.map_trans = None
+        self.performance_map = None
+        self.map_received = False
+        self.score = 0
+
+
+    def handle_map(self, msg):
+        if self.map_received:
+            return
+        self.map_info = msg.info
+        self.performance_map = np.zeros([self.map_info.width, self.map_info.height], dtype=np.int8)
+        tflis = TransformListener()
+        tflis.waitForTransform("/map", "/mocap", rospy.Time(0), rospy.Duration(5))
+        trans, rot = tflis.lookupTransform("/map", "/mocap", rospy.Time(0))
+        trans = Vector3(x=trans[0]/self.map_info.resolution, y=trans[1]/self.map_info.resolution, z=0)
+        self.map_trans = Transform(translation=trans, rotation=rot)
+        self.map_received = True
+        rospy.loginfo('Map received.')
 
     def handle_path(self, msg):
-        batch_xs, params = self.predict_once(msg)
+        if not self.map_received:
+            return
+
+        # Performance measure
+        predict_score = 0
+        for i in range(0, len(msg.poses)):
+            x = msg.poses[i].pose.position.x / self.map_info.resolution + self.map_trans.translation.x
+            y = msg.poses[i].pose.position.y / self.map_info.resolution + self.map_trans.translation.y
+            predict_score += self.performance_map[int(x),int(y)]
+        smoother = 0.99
+        self.score = smoother*self.score + (1-smoother)*predict_score
+        self.pub_score.publish(Float64MultiArray(data=[self.score]))
+
+        # new prediction
+        if self.predict_type == 1:
+            batch_xs, params = self.predict_once1(msg)
+        elif self.predict_type == 2:
+            batch_xs, params = self.predict_once2(msg)
+        elif self.predict_type == 3:
+            batch_xs, params = self.predict_once3(msg)
+        elif self.predict_type == 4:
+            batch_xs, params = self.predict_once4(msg)
         # batch_xs = self.predict_recursive(msg, start_idx)
         self.pub_path_param.publish(params)
 
@@ -69,7 +119,7 @@ class nnPredict:
         if self.learning:
             self.online_learning(batch_xs)
 
-    def predict_once(self, msg, pub=True):
+    def predict_once1(self, msg, pub=True):
         start_idx = 0
         if len(msg.poses) < traj_back:
             rospy.logerr('insufficient pass path length.')
@@ -125,20 +175,113 @@ class nnPredict:
         params.append(msg.poses[-1].header.stamp.to_sec())
 
         # span = (lasttime-msg.poses[0].header.stamp).to_sec() - 0.1
-        # span = 0
+        span = 0
+        for j in range(0, self.predict_step):
+            # span += ((0.01-self.stat[0,0]) / self.stat[1,0])
+            span += 0.1
+            new_pose = PoseStamped()
+            new_pose.pose.position.x = (
+            result[0] + result[1] * span + result[2] * np.power(span, 2))  # *self.stat[1,1] + self.stat[0,1]
+            new_pose.pose.position.y = (
+            result[3] + result[4] * span + result[5] * np.power(span, 2))  # *self.stat[1,2] + self.stat[0,2]
+            new_pose.pose.position.z = 0
+            new_pose.pose.orientation.w = 1
+            new_pose.header = msg.poses[-1].header
+            # new_pose.header.stamp = msg.poses[0].header.stamp + rospy.Duration(span)
+            new_poses.append(new_pose)
+
+        # laststepx = msg.poses[-1].pose.position.x
+        # laststepy = msg.poses[-1].pose.position.y
         # for j in range(0, self.predict_step):
-        #     # span += ((0.01-self.stat[0,0]) / self.stat[1,0])
-        #     span += 0.1
+        #     if (len(result)/2) < j:
+        #         break
         #     new_pose = PoseStamped()
-        #     new_pose.pose.position.x = (
-        #     result[0] + result[1] * span + result[2] * np.power(span, 2))  # *self.stat[1,1] + self.stat[0,1]
-        #     new_pose.pose.position.y = (
-        #     result[3] + result[4] * span + result[5] * np.power(span, 2))  # *self.stat[1,2] + self.stat[0,2]
+        #     # new_pose.pose.position.x = msg.poses[-1].pose.position.x + result[j*2]
+        #     # new_pose.pose.position.y = msg.poses[-1].pose.position.y + result[j*2+1]
+        #     new_pose.pose.position.x = laststepx + result[j * 2]
+        #     new_pose.pose.position.y = laststepy + result[j * 2 + 1]
         #     new_pose.pose.position.z = 0
         #     new_pose.pose.orientation.w = 1
         #     new_pose.header = msg.poses[-1].header
-        #     # new_pose.header.stamp = msg.poses[0].header.stamp + rospy.Duration(span)
         #     new_poses.append(new_pose)
+        #     laststepx = new_pose.pose.position.x
+        #     laststepy = new_pose.pose.position.y
+
+        if pub:
+            self.pub_path_predict.publish(header=msg.header, poses=new_poses)
+            self.update_map(new_poses)
+
+        return batch_xs, Float64MultiArray(data=params)
+
+    def predict_once2(self, msg, pub=True):
+        start_idx = 0
+        if len(msg.poses) < traj_back:
+            rospy.logerr('insufficient pass path length.')
+            return
+        else:
+            start_idx = len(msg.poses) - traj_back
+
+        #### Data Preparation ###
+        batch_xs = np.zeros([traj_back, 3])
+        lasttime = msg.poses[start_idx].header.stamp
+        for i in range(start_idx, len(msg.poses)):
+            batch_xs[i, 0] = (msg.poses[i].header.stamp - lasttime).to_sec()
+            batch_xs[i, 1] = msg.poses[i].pose.position.x
+            batch_xs[i, 2] = msg.poses[i].pose.position.y
+            lasttime = msg.poses[i].header.stamp
+        batch_xs = np.reshape(batch_xs, newshape=[1, traj_back * 3])
+        result = self.predict.eval(feed_dict={self.input: batch_xs, self.drop: 1.0}, session=self.sess)
+
+        ### Output Organisation ###
+        new_poses = []
+        result = np.reshape(result, -1)
+        params = []
+        for dt in range(0, 6):
+            params.append(result[dt])
+        params.append(msg.poses[0].header.stamp.to_sec())
+        params.append(msg.poses[-1].header.stamp.to_sec())
+
+        span = (lasttime-msg.poses[0].header.stamp).to_sec() - 0.1
+        for j in range(0, self.predict_step):
+            span += 0.1
+            new_pose = PoseStamped()
+            new_pose.pose.position.x = (result[0] + result[1] * span + result[2] * np.power(span, 2))
+            new_pose.pose.position.y = (result[3] + result[4] * span + result[5] * np.power(span, 2))
+            new_pose.pose.position.z = 0
+            new_pose.pose.orientation.w = 1
+            new_pose.header = msg.poses[-1].header
+            new_poses.append(new_pose)
+
+        if pub:
+            self.pub_path_predict.publish(header=msg.header, poses=new_poses)
+            self.update_map(new_poses)
+
+        return batch_xs, Float64MultiArray(data=params)
+
+    def predict_once3(self, msg, pub=True):
+        start_idx = 0
+        if len(msg.poses) < traj_back:
+            rospy.logerr('insufficient pass path length.')
+            return
+        else:
+            start_idx = len(msg.poses) - traj_back
+
+        #### Data Preparation ###
+        batch_xs = np.zeros([traj_back, 3])
+        lasttime = msg.poses[start_idx].header.stamp
+        for i in range(start_idx, len(msg.poses)):
+            batch_xs[i, 0] = (msg.poses[i].header.stamp - lasttime).to_sec()
+            batch_xs[i, 1] = msg.poses[i].pose.position.x
+            batch_xs[i, 2] = msg.poses[i].pose.position.y
+            lasttime = msg.poses[i].header.stamp
+        batch_xs = np.reshape(batch_xs, newshape=[1, traj_back * 3])
+        result = self.predict.eval(feed_dict={self.input: batch_xs, self.drop: 1.0}, session=self.sess)
+
+        ### Output Organisation ###
+        new_poses = []
+        params = []
+        result = np.reshape(result, -1)
+
         for j in range(0, self.predict_step):
             if (len(result)/2) < j:
                 break
@@ -152,8 +295,76 @@ class nnPredict:
 
         if pub:
             self.pub_path_predict.publish(header=msg.header, poses=new_poses)
+            self.update_map(new_poses)
 
         return batch_xs, Float64MultiArray(data=params)
+
+    def predict_once4(self, msg, pub=True):
+        start_idx = 0
+        if len(msg.poses) < traj_back:
+            rospy.logerr('insufficient pass path length.')
+            return
+        else:
+            start_idx = len(msg.poses) - traj_back
+
+        #### Data Preparation ###
+        batch_xs = np.zeros([traj_back, 3])
+        lasttime = msg.poses[start_idx].header.stamp
+        for i in range(start_idx, len(msg.poses)):
+            batch_xs[i, 0] = (msg.poses[i].header.stamp - lasttime).to_sec()
+            batch_xs[i, 1] = msg.poses[i].pose.position.x
+            batch_xs[i, 2] = msg.poses[i].pose.position.y
+            lasttime = msg.poses[i].header.stamp
+        batch_xs = np.reshape(batch_xs, newshape=[1, traj_back * 3])
+        result = self.predict.eval(feed_dict={self.input: batch_xs, self.drop: 1.0}, session=self.sess)
+
+        ### Output Organisation ###
+        new_poses = []
+        params = []
+        result = np.reshape(result, -1)
+
+        laststepx = msg.poses[-1].pose.position.x
+        laststepy = msg.poses[-1].pose.position.y
+        for j in range(0, self.predict_step):
+            if (len(result)/2) < j:
+                break
+            new_pose = PoseStamped()
+            new_pose.pose.position.x = laststepx + result[j * 2]
+            new_pose.pose.position.y = laststepy + result[j * 2 + 1]
+            new_pose.pose.position.z = 0
+            new_pose.pose.orientation.w = 1
+            new_pose.header = msg.poses[-1].header
+            new_poses.append(new_pose)
+            laststepx = new_pose.pose.position.x
+            laststepy = new_pose.pose.position.y
+
+        if pub:
+            self.pub_path_predict.publish(header=msg.header, poses=new_poses)
+            self.update_map(new_poses)
+
+        return batch_xs, Float64MultiArray(data=params)
+
+    def update_map(self, path):
+        confidence = 0
+        for i in range(0, len(path)):
+            x = int(path[i].pose.position.x / self.map_info.resolution + self.map_trans.translation.x)
+            y = int(path[i].pose.position.y / self.map_info.resolution + self.map_trans.translation.y)
+            if x + 1 < self.map_info.width and x-1 >= 0 and y+1<self.map_info.height and y-1>=0:
+                confidence = min(confidence + 3, 100)
+                self.performance_map[x, y] = min(self.performance_map[x, y] + confidence, 100)
+                self.performance_map[x+1, y] = min(self.performance_map[x+1, y] + confidence/3, 100)
+                self.performance_map[x-1, y] = min(self.performance_map[x-1, y] + confidence/3, 100)
+                self.performance_map[x, y+1] = min(self.performance_map[x, y+1] + confidence/3, 100)
+                self.performance_map[x, y-1] = min(self.performance_map[x, y-1] + confidence/3, 100)
+                self.performance_map[x+1, y+1] = min(self.performance_map[x+1, y+1] + confidence/4, 100)
+                self.performance_map[x-1, y-1] = min(self.performance_map[x-1, y-1] + confidence/4, 100)
+                self.performance_map[x+1, y-1] = min(self.performance_map[x+1, y-1] + confidence/4, 100)
+                self.performance_map[x-1, y+1] = min(self.performance_map[x-1, y+1] + confidence/4, 100)
+
+        self.performance_map = (self.performance_map.astype(np.double) / 1.1).astype(np.int8)
+        self.pub_score_map.publish(OccupancyGrid(header=Header(frame_id='map', stamp=rospy.Time.now()),
+                                                 info=self.map_info,
+                                                 data=np.reshape(self.performance_map.transpose(), -1)))
 
     def predict_recursive(self, msg, start_idx):
         batch_xs = np.zeros([traj_back+self.predict_step, 3])

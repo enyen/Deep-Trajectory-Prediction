@@ -3,6 +3,7 @@
 	<arg name="odom_topic" default="/bill" />
 	<arg name="path_size" default="30" />
 	<arg name="predict_time" default="1.5" />
+	<!--<arg name="predict_type" />-->
 	<arg name="decision_boundary" default="0.8" />
 	<arg name="small_step" default="15" />
 	<arg name="online_learning" default="true" />
@@ -15,18 +16,53 @@
 		<arg name="predict_time" value="$(arg predict_time)" />
 		<arg name="backgroud" value="false" />
 	</include>
+	<!--<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
+		<arg name="predict_time" value="$(arg predict_time)" />
+		<arg name="predict_type" value="$(arg predict_type)" />
+		<arg name="online_learning" value="$(arg online_learning)" />
+		<arg name="model_file" value="$(find nn_trajectory)/tf_model/saved$(arg predict_type)/model" />
+		<arg name="model_meta_file" value="$(find nn_trajectory)/tf_model/saved$(arg predict_type)/model.meta" />
+		<arg name="backgroud" value="false" />
+	</include>-->
 	<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
 		<arg name="predict_time" value="$(arg predict_time)" />
+		<arg name="predict_type" value="1" />
 		<arg name="online_learning" value="$(arg online_learning)" />
+		<arg name="model_file" value="$(find nn_trajectory)/tf_model/saved1/model" />
+		<arg name="model_meta_file" value="$(find nn_trajectory)/tf_model/saved1/model.meta" />
+		<arg name="backgroud" value="false" />
+	</include>
+	<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
+		<arg name="predict_time" value="$(arg predict_time)" />
+		<arg name="predict_type" value="2" />
+		<arg name="online_learning" value="$(arg online_learning)" />
+		<arg name="model_file" value="$(find nn_trajectory)/tf_model/saved2/model" />
+		<arg name="model_meta_file" value="$(find nn_trajectory)/tf_model/saved2/model.meta" />
+		<arg name="backgroud" value="false" />
+	</include>
+	<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
+		<arg name="predict_time" value="$(arg predict_time)" />
+		<arg name="predict_type" value="3" />
+		<arg name="online_learning" value="$(arg online_learning)" />
+		<arg name="model_file" value="$(find nn_trajectory)/tf_model/saved3/model" />
+		<arg name="model_meta_file" value="$(find nn_trajectory)/tf_model/saved3/model.meta" />
+		<arg name="backgroud" value="false" />
+	</include>
+	<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
+		<arg name="predict_time" value="$(arg predict_time)" />
+		<arg name="predict_type" value="4" />
+		<arg name="online_learning" value="$(arg online_learning)" />
+		<arg name="model_file" value="$(find nn_trajectory)/tf_model/saved4/model" />
+		<arg name="model_meta_file" value="$(find nn_trajectory)/tf_model/saved4/model.meta" />
 		<arg name="backgroud" value="false" />
 	</include>
 
-	<node name="predict_merge" pkg="human_motions" type="predict_merge" output="screen">
+	<!--<node name="predict_merge" pkg="human_motions" type="predict_merge" output="screen">
 		<param name="predict_time" value="$(arg predict_time)"/>
 		<param name="decision_boundary" value="$(arg decision_boundary)" />
 		<param name="occupancy_grid" value="$(arg occupancy_grid)" />
 		<param name="small_step" value="$(arg small_step)" />
-	</node>
+	</node>-->
 
 	<node name="pass_path" pkg="human_motions" type="pass_path" output="screen">
 		<param name="odom_topic" value="$(arg odom_topic)" />

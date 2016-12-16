@@ -6,23 +6,24 @@ from __future__ import print_function
 import trajactory_data as input_data
 import tensorflow as tf
 
-traj_back = 30
-traj_front = 30
-order = 2
-
-h1_len = 100
-h2_len = 200
-h3_len = 300
+traj_back, traj_front, order = 30, 30, 2
+h1_len, h2_len, h3_len = 200, 300, 400
 # out_len = 2*(order+1)
 out_len = traj_front * 2
 # out_len = traj_front * 3
 
+savedModel = 'saved3/model'
+restoreModel = True
+minibatch, learnrate, dropout, iteration = 100, 1e-6, 0.5, 200000
+regenerateData = False
+
 
 def main(_):
     # produce data
-    # input_data.produce_data(traj_back, traj_front, order)
-    # print("data produced")
-    # return
+    if regenerateData:
+        input_data.produce_data3(traj_back, traj_front, order)
+        print("data produced")
+        return
 
     # read data
     trajactory = input_data.read_data_sets(traj_back, traj_front)
@@ -74,8 +75,10 @@ def main(_):
     # variable init
     sess = tf.InteractiveSession()
     saver = tf.train.Saver()
-    # saver.restore(sess, 'saved3/model')
-    tf.initialize_all_variables().run()
+    if restoreModel:
+        saver.restore(sess, savedModel)
+    else:
+        tf.initialize_all_variables().run()
     tf.add_to_collection("yl", yl)
     tf.add_to_collection("x1", x1)
     tf.add_to_collection("keep_prob", keep_prob)
@@ -85,25 +88,25 @@ def main(_):
     tf.add_to_collection("momentum", momentum)
 
     # Train
-    for i in range(500000):
+    for i in range(iteration):
         # performance evaluation
         if i % 1000 == 0:
-            train_x, train_y = trajactory.train.next_batch(100)
+            train_x, train_y = trajactory.train.next_batch(minibatch)
             train_loss = predict_loss.eval(feed_dict={x1: train_x, y_: train_y, keep_prob: 1.0})
-            test_x, test_y = trajactory.test.next_batch(100)
+            test_x, test_y = trajactory.test.next_batch(minibatch)
             test_loss = predict_loss.eval(feed_dict={x1: test_x, y_: test_y, keep_prob: 1.0})
             print("step %d, t_loss %g, v_loss %g" % (i, train_loss, test_loss))
 
         # variables storing
         if (i % 50000 == 0) and (i != 0):
-            saver.save(sess, 'saved3/model')
+            saver.save(sess, savedModel)
             print("model saved.")
 
         # training batch
-        batch_xs, batch_ys = trajactory.train.next_batch(100)
-        train_step.run(feed_dict={x1: batch_xs, y_: batch_ys, keep_prob: 0.5, learn_rate: 8e-4})
+        batch_xs, batch_ys = trajactory.train.next_batch(minibatch)
+        train_step.run(feed_dict={x1: batch_xs, y_: batch_ys, keep_prob: dropout, learn_rate: learnrate})
 
-    saver.save(sess, 'saved3/model')
+    saver.save(sess, savedModel)
     print("model saved.")
 
 
