@@ -8,20 +8,20 @@ import tensorflow as tf
 
 traj_back, traj_front, order = 30, 30, 2
 h1_len, h2_len, h3_len = 200, 300, 400
-# out_len = 2*(order+1)
-out_len = traj_front * 2
+out_len = 2*(order+1)
+# out_len = traj_front * 2
 # out_len = traj_front * 3
 
-savedModel = 'saved3/model'
+savedModel = 'saved1/model'
 restoreModel = True
-minibatch, learnrate, dropout, iteration = 100, 1e-6, 0.5, 200000
+minibatch, learnrate, dropout, iteration = 100, 1e-7, 0.5, 200000
 regenerateData = False
 
 
 def main(_):
     # produce data
     if regenerateData:
-        input_data.produce_data3(traj_back, traj_front, order)
+        input_data.produce_data1(traj_back, traj_front, order)
         print("data produced")
         return
 

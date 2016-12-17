@@ -60,12 +60,12 @@ class nnPredict:
         else:
             rospy.loginfo("NeuralNet Online Learning Disabled.")
 
+        occu_grid = rospy.get_param('~occupancy_grid', '/map')
+        self.sub_map = rospy.Subscriber(occu_grid, OccupancyGrid, self.handle_map)
         self.sub_path_pass = rospy.Subscriber('/human_traj/path_pass', Path, self.handle_path)
         self.pub_path_param = rospy.Publisher('/human_traj/nn_param', Float64MultiArray, queue_size=1)
         self.pub_path_predict = rospy.Publisher('/human_traj/path_nn', Path, queue_size=1)
         self.server = rospy.Service('~pose2params_nn', path2params, self.handle_path2params)
-        occu_grid = rospy.get_param('~occupancy_grid', '/map')
-        self.sub_map = rospy.Subscriber(occu_grid, OccupancyGrid, self.handle_map)
         self.pub_score = rospy.Publisher('/human_traj/nn_score', Float64MultiArray, queue_size=1)
         self.pub_score_map = rospy.Publisher('/human_traj/nn_score_map', OccupancyGrid, queue_size=1)
 
@@ -77,8 +77,8 @@ class nnPredict:
 
 
     def handle_map(self, msg):
-        if self.map_received:
-            return
+        # if self.map_received:
+        #     return
         self.map_info = msg.info
         self.performance_map = np.zeros([self.map_info.width, self.map_info.height], dtype=np.int8)
         tflis = TransformListener()

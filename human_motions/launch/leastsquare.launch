@@ -8,6 +8,8 @@
 
 	<node name="leastsquare" pkg="human_motions" type="leastsquare_predict" output="screen">
 		<param name="predict_time" value="$(arg predict_time)" />
+		<remap from="/leastsquare/human_traj/score_ls" to="/ls_score" />
+		<remap from="/human_traj/path_leastsquare" to="/ls_path" />
 	</node>
 
 	<group if="$(arg backgroud)">

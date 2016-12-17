@@ -18,9 +18,9 @@
 		<param name="predict_time" value="$(arg predict_time)" />
 		<param name="predict_type" value="$(arg predict_type)" />
 		<param name="online_learning" value="$(arg online_learning)"/>
-		<remap from="/human_traj/nn_score" to="/human_traj/nn_score$(arg predict_type)"/>
+		<remap from="/human_traj/nn_score" to="/nn_score$(arg predict_type)"/>
 		<remap from="/human_traj/nn_score_map" to="/human_traj/nn_score$(arg predict_type)_map"/>
-		<remap from="/human_traj/path_nn" to="/human_traj/path_nn$(arg predict_type)_map"/>
+		<remap from="/human_traj/path_nn" to="/nn_path$(arg predict_type)"/>
 	</node>
 
 	<group if="$(arg backgroud)">
