@@ -5,7 +5,5 @@
 		<param name="odom_topic" value="/bill" />
 	</node>
 	<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l --delay=1 --queue=10 $(find human_motions)/data/traj.bag" />
-	</node>
-	<node name="rviz" pkg="rviz" type="rviz" output="screen">
-	</node>
+	<node name="rviz" pkg="rviz" type="rviz" output="screen" />
 </launch>
