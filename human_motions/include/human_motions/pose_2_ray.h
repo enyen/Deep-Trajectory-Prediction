@@ -12,6 +12,23 @@
 
 #include <vector>
 
+#include <sstream>
+#include <cmath>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+
+namespace patch
+{
+    template < typename T > std::string to_string( const T& n )
+    {
+        std::ostringstream stm ;
+        stm << n ;
+        return stm.str() ;
+    }
+}
+
 class pose_2_ray
 {
     typedef Eigen::Matrix<signed char, Eigen::Dynamic, Eigen::Dynamic> MatrixXc;
@@ -30,13 +47,16 @@ private:
     ros::Publisher m_pub_scan;
 
     sensor_msgs::LaserScan m_scan;
-    geometry_msgs::TransformStamped pose;
+    geometry_msgs::TransformStamped m_pose;
     tf2_ros::TransformBroadcaster tfb;
 
     nav_msgs::MapMetaData m_mapInfo;
     MatrixXc m_mapData;
     tf::StampedTransform m_mapTransform;
     bool m_map_received;
+
+    std::ofstream m_myfile;
+    double m_time_start;
 };
 
 #endif // POSE_2_RAY_H

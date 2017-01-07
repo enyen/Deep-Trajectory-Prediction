@@ -228,6 +228,45 @@ def produce_data4(len_back, len_front, order):
     np.save('traj_label', np.asarray(train_label))
 
 
+def produce_data_scan1(len_back, len_front, order):
+    local_file = 'trajactory_scan.txt'
+    with open(local_file, 'rb') as f:
+        raw_data = []
+        for line in f:
+            raw_data.append(line.split())
+
+    raw_data = np.asarray(np.asarray(raw_data, dtype=np.float32))
+    train_data = []
+    train_label = []
+    for idx in range(len_back, (raw_data.shape[0]-len_front)):
+        scan = raw_data[(idx - len_back):idx, 3:]
+        data = raw_data[(idx - len_back):(idx + len_front), :3]
+        train_data.append(np.reshape(np.transpose(scan), [1, scan.shape[1], len_back]))
+
+        X = np.zeros([len_front, order + 1])
+        Y = np.zeros([len_front, 2])
+        accum = 0
+        for i in range(0, len_front):
+            accum += data[(len_back + i), 0]
+            for j in range(0, order + 1):
+                X[i, j] = np.power(accum, j)
+            Y[i, 0] = data[(len_back + i), 1]
+            Y[i, 1] = data[(len_back + i), 2]
+        temp = np.linalg.solve(X.transpose().dot(X), X.transpose())
+        params = np.reshape(temp.dot(Y).transpose(), -1)
+
+        accum = 0
+        delta = np.zeros(2*len_front)
+        for i in range(0, len_front):
+            accum += 0.1
+            delta[i * 2] = params[0] + accum * params[1] + accum**2 * params[2] - data[(len_back-1), 1]
+            delta[i*2+1] = params[3] + accum * params[4] + accum**2 * params[5] - data[(len_back-1), 2]
+        train_label.append(np.reshape(delta, -1))
+
+    np.save('traj_data', np.asarray(train_data))
+    np.save('traj_label', np.asarray(train_label))
+
+
 # def produce_data(len_back, len_front, order):
 #     local_file = 'trajactory.txt'
 #     with open(local_file, 'rb') as f:
