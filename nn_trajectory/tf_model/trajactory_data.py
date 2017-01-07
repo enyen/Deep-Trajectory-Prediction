@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import numpy as np
 import random
-from tensorflow.contrib.learn.python.learn.datasets import base
 random.seed()
 
 
@@ -50,6 +49,25 @@ class DataSet(object):
         return self._data[start:end], self._label[start:end]
 
 
+class Datasets(object):
+    def __init__(self, train, test, validation):
+        self._train = train
+        self._test = test
+        self._validation = validation
+
+    @property
+    def train(self):
+        return self._train
+
+    @property
+    def test(self):
+        return self._test
+
+    @property
+    def validate(self):
+        return self._validation
+
+
 def read_data_sets(len_back, len_front, test_size=1000):
     data_file = 'traj_data.npy'
     label_file = 'traj_label.npy'
@@ -70,7 +88,7 @@ def read_data_sets(len_back, len_front, test_size=1000):
     test = DataSet(test_data, test_label, len_back, len_front)
     validate = DataSet(test_data, test_label, len_back, len_front)
 
-    return base.Datasets(train=train, test=test, validation=validate)
+    return Datasets(train=train, test=test, validation=validate)
 
 
 def produce_data1(len_back, len_front, order):
