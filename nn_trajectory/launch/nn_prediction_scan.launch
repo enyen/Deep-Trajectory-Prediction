@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="model_file" default="$(find nn_trajectory)/tf_model/saved_scan1/model" />
+	<arg name="model_meta_file" default="$(find nn_trajectory)/tf_model/saved_scan1/model.meta" />
+	<arg name="predict_time" default="1.5" />
+
+	<arg name="backgroud" default="true" />
+	<arg name="occupancy_grid" default="/map" />
+	<arg name="odom_topic" default="/bill" />
+	<arg name="laser_scans" default="/human_traj/scan_pass" />
+	<arg name="path_size" default="30" />
+	<arg name="online_learning" default="true" />
+
+	<node name="nn_scan" pkg="nn_trajectory" type="nn_predict_scan.py" output="screen">
+		<param name="model_file" value="$(arg model_file)" />
+		<param name="model_meta_file" value="$(arg model_meta_file)" />
+		<param name="predict_time" value="$(arg predict_time)" />
+		<param name="online_learning" value="$(arg online_learning)"/>
+		<param name="laser_scans" value="$(arg laser_scans)"/>
+		<param name="occupancy_grid" value="$(arg occupancy_grid)"/>
+	</node>
+
+	<group if="$(arg backgroud)">
+		<node name="pass_path" pkg="human_motions" type="pass_path" output="screen">
+			<param name="odom_topic" value="$(arg odom_topic)" />
+			<param name="path_size" value="$(arg path_size)" />
+		</node>
+		<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l --delay=1 --queue=10 $(find human_motions)/data/traj.bag" />
+		<node name="rviz" pkg="rviz" type="rviz" output="screen" />
+	</group>
+</launch>

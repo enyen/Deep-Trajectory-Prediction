@@ -1,21 +1,47 @@
 <?xml version="1.0"?>
 <launch>
 	<arg name="odom_topic" default="/bill" />
+	<arg name="scan_topic" default="/pose_2_ray/scan" />
 	<arg name="path_size" default="30" />
+	<arg name="path_scan_size" default="30" />
 	<arg name="predict_time" default="1.5" />
 	<!--<arg name="predict_type" />-->
 	<arg name="decision_boundary" default="0.8" />
 	<arg name="small_step" default="15" />
-	<arg name="online_learning" default="true" />
+	<arg name="online_learning" default="false" />
 	<arg name="occupancy_grid" default="/map" />
 
 	<env name="ROSCONSOLE_CONFIG_FILE"
        value="$(find human_motions)/launch/rosconsole.config"/>
 
+	<include file="$(find human_motions)/launch/pose_2_ray.launch">
+		<arg name="backgroud" value="false" />
+		<arg name="odom_topic" value="$(arg odom_topic)" />
+		<arg name="occupancy_grid" value="$(arg occupancy_grid)" />
+	</include>
+
+	<node name="pass_path" pkg="human_motions" type="pass_path" output="screen">
+		<param name="odom_topic" value="$(arg odom_topic)" />
+		<param name="scan_topic" value="$(arg scan_topic)" />
+		<param name="path_size" value="$(arg path_size)" />
+		<param name="path_scan_size" value="$(arg path_scan_size)" />
+		<param name="scan_topic" value="$(arg scan_topic)" />
+		<param name="path_scan_size" value="$(arg path_scan_size)" />
+	</node>
+
 	<include file="$(find human_motions)/launch/leastsquare.launch">
 		<arg name="predict_time" value="$(arg predict_time)" />
 		<arg name="backgroud" value="false" />
 	</include>
+
+	<include file="$(find nn_trajectory)/launch/nn_prediction_scan.launch">
+		<arg name="predict_time" value="$(arg predict_time)" />
+		<arg name="online_learning" value="$(arg online_learning)" />
+		<arg name="model_file" value="$(find nn_trajectory)/tf_model/saved_scan1/model" />
+		<arg name="model_meta_file" value="$(find nn_trajectory)/tf_model/saved_scan1/model.meta" />
+		<arg name="backgroud" value="false" />
+	</include>
+
 	<!--<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
 		<arg name="predict_time" value="$(arg predict_time)" />
 		<arg name="predict_type" value="$(arg predict_type)" />
@@ -23,7 +49,7 @@
 		<arg name="model_file" value="$(find nn_trajectory)/tf_model/saved$(arg predict_type)/model" />
 		<arg name="model_meta_file" value="$(find nn_trajectory)/tf_model/saved$(arg predict_type)/model.meta" />
 		<arg name="backgroud" value="false" />
-	</include>-->
+	</include>
 	<include file="$(find nn_trajectory)/launch/nn_prediction.launch">
 		<arg name="predict_time" value="$(arg predict_time)" />
 		<arg name="predict_type" value="1" />
@@ -55,7 +81,7 @@
 		<arg name="model_file" value="$(find nn_trajectory)/tf_model/saved4/model" />
 		<arg name="model_meta_file" value="$(find nn_trajectory)/tf_model/saved4/model.meta" />
 		<arg name="backgroud" value="false" />
-	</include>
+	</include>-->
 
 	<!--<node name="predict_merge" pkg="human_motions" type="predict_merge" output="screen">
 		<param name="predict_time" value="$(arg predict_time)"/>
@@ -63,11 +89,6 @@
 		<param name="occupancy_grid" value="$(arg occupancy_grid)" />
 		<param name="small_step" value="$(arg small_step)" />
 	</node>-->
-
-	<node name="pass_path" pkg="human_motions" type="pass_path" output="screen">
-		<param name="odom_topic" value="$(arg odom_topic)" />
-		<param name="path_size" value="$(arg path_size)" />
-	</node>
 
 	<node name="bag_player" pkg="rosbag" type="play" output="screen" args="-l --delay=5 --queue=10 $(find human_motions)/data/traj.bag" />
 	<node name="rviz" pkg="rviz" type="rviz" output="screen" />

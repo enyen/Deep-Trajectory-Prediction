@@ -39,13 +39,13 @@ pose_2_ray::pose_2_ray()
     m_pose.transform.rotation.w = 1;
     tfb.sendTransform(m_pose);
 
-    m_myfile.open("/home/enyen/Documents/tranjactory4.txt");
-    m_time_start = -1;
+//    m_myfile.open("/home/enyen/Documents/tranjactory4.txt");
+//    m_time_start = -1;
 }
 
 pose_2_ray::~pose_2_ray()
 {
-    m_myfile.close();
+//    m_myfile.close();
 }
 
 void pose_2_ray::handle_map(const nav_msgs::OccupancyGridConstPtr &msg)
@@ -119,22 +119,22 @@ void pose_2_ray::handle_odom(const nav_msgs::OdometryConstPtr &msg)
         m_scan.header.stamp = ros::Time::now();
         m_pub_scan.publish(m_scan);
 
-        if(m_time_start == -1) m_time_start = msg->header.stamp.toSec();
+//        if(m_time_start == -1) m_time_start = msg->header.stamp.toSec();
 
-        m_myfile << patch::to_string(msg->header.stamp.toSec() - m_time_start);
-        m_myfile << " ";
-        m_myfile << patch::to_string(msg->pose.pose.position.x);
-        m_myfile << " ";
-        m_myfile << patch::to_string(msg->pose.pose.position.y);
-        m_myfile << " ";
-        for(int r=0; r<m_scan.ranges.size(); r++)
-        {
-            m_myfile << patch::to_string(m_scan.ranges[r]);
-            m_myfile << " ";
-        }
-        m_myfile << "\n";
+//        m_myfile << patch::to_string(msg->header.stamp.toSec() - m_time_start);
+//        m_myfile << " ";
+//        m_myfile << patch::to_string(msg->pose.pose.position.x);
+//        m_myfile << " ";
+//        m_myfile << patch::to_string(msg->pose.pose.position.y);
+//        m_myfile << " ";
+//        for(int r=0; r<m_scan.ranges.size(); r++)
+//        {
+//            m_myfile << patch::to_string(m_scan.ranges[r]);
+//            m_myfile << " ";
+//        }
+//        m_myfile << "\n";
 
-        m_time_start = msg->header.stamp.toSec();
+//        m_time_start = msg->header.stamp.toSec();
     }
 }
 

@@ -1,13 +1,20 @@
 <?xml version="1.0"?>
 <launch>
+	<arg name="backgroud" default="true" />
+	<arg name="odom_topic" default="/bill" />
+	<arg name="occupancy_grid" default="/map" />
+
 	<node name="pose_2_ray" pkg="human_motions" type="pose_2_ray" output="screen">
-		<param name="odom_topic" value="/bill" />
-		<param name="occupancy_grid" value="/map" />
+		<param name="odom_topic" value="$(arg odom_topic)" />
+		<param name="occupancy_grid" value="$(arg occupancy_grid)" />
 		<param name="scan_angle_range" value="1.508" /> <!-- -1.5rad to 1.5rad -->
 		<param name="scan_angle_inc" value="1.0" /> <!-- deg -->
 		<param name="scan_dist_max" value="4.0" /> <!-- meter -->
 		<param name="scan_dist_min" value="0.0" /> <!-- meter -->
 	</node>
-	<node name="bag_player" pkg="rosbag" type="play" output="screen" args="--delay=1 --queue=5 $(find human_motions)/data/traj.bag" />
-	<node name="rviz" pkg="rviz" type="rviz" output="screen" />
+
+	<group if="$(arg backgroud)">
+		<node name="bag_player" pkg="rosbag" type="play" output="screen" args="--delay=1 --queue=5 $(find human_motions)/data/traj.bag" />
+		<node name="rviz" pkg="rviz" type="rviz" output="screen" />
+	</group>
 </launch>
