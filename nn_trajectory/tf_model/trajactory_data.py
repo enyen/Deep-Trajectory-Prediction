@@ -68,16 +68,16 @@ class Datasets(object):
         return self._validation
 
 
-def read_data_sets(len_back, len_front, test_size=1000):
+def read_data_sets(len_back, len_front, test_size=1392):
     data_file = 'traj_data.npy'
     label_file = 'traj_label.npy'
     data = np.load(data_file)
     label = np.load(label_file)
 
-    perm = np.arange(data.shape[0])
-    np.random.shuffle(perm)
-    data = data[perm]
-    label = label[perm]
+    # perm = np.arange(data.shape[0])
+    # np.random.shuffle(perm)
+    # data = data[perm]
+    # label = label[perm]
 
     train_data = data[:(data.shape[0] - test_size)]
     test_data = data[(data.shape[0] - test_size):]
